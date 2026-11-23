@@ -1,0 +1,2111 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+<title>Be Beach · Gestion boutique</title>
+<link rel="manifest" href="/manifest.json" />
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+<link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+<link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
+<link rel="shortcut icon" href="/icon-192.png" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<meta name="theme-color" content="#8FB9C7" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<style>
+  :root{
+    --bg:#FBF6EC; --sand:#F0E4CC; --sand-deep:#E4D2A8;
+    --sky:#8FB9C7; --sky-deep:#5F93A4;
+    --coral:#E4886B; --coral-deep:#D3714F;
+    --sage:#93A583; --ink:#3B362C; --ink-soft:#7A7362;
+    --card:#FFFDF8; --line:#E9DFC7;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:'DM Sans','Inter',sans-serif;color:var(--ink);
+    background:
+      linear-gradient(rgba(251,246,236,0.45), rgba(251,246,236,0.55)),
+      url('fond-plage.jpg') no-repeat center top fixed;
+    background-size:cover;
+    min-height:100vh;
+  }
+  .serif{font-family:'Fraunces',serif;}
+  ::-webkit-scrollbar{width:8px;height:8px;}
+  ::-webkit-scrollbar-thumb{background:var(--sand-deep);border-radius:8px;}
+  button{font-family:inherit;}
+  input, select{font-family:inherit;}
+  a{color:inherit;}
+
+  .header{position:fixed;top:0;left:0;right:0;z-index:40;background:linear-gradient(120deg,var(--sky),var(--sky-deep));padding:22px 24px 40px;transition:transform 0.25s ease;}
+  .header.header-hidden{transform:translateY(-100%);}
+  .container{transition:padding-top 0.2s ease;}
+  .header-row{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;}
+  .logo{display:flex;align-items:center;gap:12px;}
+  .logo-badge{height:88px;padding:8px 18px;border-radius:16px;background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,0.15);}
+  .logo-badge img{height:100%;width:auto;display:block;}
+  .logo-name{font-family:'Fraunces',serif;font-weight:600;font-size:17px;color:var(--ink);}
+  .logo-sub{font-size:10px;letter-spacing:1px;color:var(--ink-soft);text-transform:uppercase;}
+  .nav{display:flex;gap:8px;flex-wrap:wrap;}
+  .nav-btn{display:flex;align-items:center;gap:7px;padding:9px 15px;border-radius:999px;border:none;background:rgba(255,255,255,0.18);color:#fff;font-weight:600;font-size:13.5px;cursor:pointer;}
+  .nav-btn.active{background:#fff;color:var(--sky-deep);}
+  .wave{position:absolute;bottom:-1px;left:0;width:100%;height:40px;display:block;}
+
+  .container{padding:0 24px 40px;max-width:1120px;margin:0 auto;}
+  .stat-row{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:22px;}
+  .stat-card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px 20px;flex:1 1 180px;min-width:160px;box-shadow:0 2px 10px rgba(59,54,44,0.05);}
+  .stat-label{font-size:12px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;}
+  .stat-value{font-family:'Fraunces',serif;font-size:28px;font-weight:600;}
+  .stat-sub{font-size:12px;color:var(--ink-soft);margin-top:4px;}
+
+  .grid2{display:grid;grid-template-columns:1.2fr 1fr;gap:18px;}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:0 2px 10px rgba(59,54,44,0.05);}
+  .panel-title{font-family:'Fraunces',serif;font-size:16px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+  .muted{color:var(--ink-soft);font-size:13.5px;}
+  .sale-row{display:flex;justify-content:space-between;font-size:13.5px;border-bottom:1px solid var(--line);padding-bottom:8px;margin-bottom:10px;}
+  .lowstock-row{display:flex;align-items:center;gap:10px;font-size:13.5px;margin-bottom:10px;}
+
+  .thumb{border-radius:12px;object-fit:cover;background:var(--sand);flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+  .thumb-fallback{background:var(--sand);display:flex;align-items:center;justify-content:center;color:var(--ink-soft);}
+
+  .toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px;}
+  .search-wrap{position:relative;flex:1 1 220px;max-width:340px;}
+  .search-wrap svg{position:absolute;left:12px;top:11px;}
+  .input, select.input{border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-size:14px;color:var(--ink);background:#fff;outline:none;width:100%;}
+  .btn{border:none;border-radius:12px;padding:10px 16px;font-size:14px;font-weight:600;cursor:pointer;transition:transform 0.12s ease, box-shadow 0.12s ease;}
+  .btn-coral{background:var(--coral);color:#fff;box-shadow:0 3px 10px rgba(228,136,107,0.35);}
+  .btn-sage{background:var(--sage);color:#fff;box-shadow:0 3px 10px rgba(147,165,131,0.35);}
+  .btn-outline{background:#fff;border:1px solid var(--line);color:var(--ink);}
+  .btn:not(:disabled):hover{transform:translateY(-1px);}
+  .btn:disabled{background:var(--sand-deep);cursor:not-allowed;box-shadow:none;}
+
+  .pills{display:flex;gap:8px;overflow-x:auto;padding-bottom:14px;}
+  .pill{padding:7px 14px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--ink);font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;}
+  .pill.active{background:var(--sky);border-color:var(--sky-deep);color:#fff;}
+
+  .stock-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px;}
+  .stock-card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;box-shadow:0 2px 8px rgba(59,54,44,0.05);transition:box-shadow 0.15s ease;}
+  .stock-card:hover{box-shadow:0 4px 16px rgba(59,54,44,0.09);}
+  .stock-top{display:flex;gap:12px;margin-bottom:10px;}
+  .stock-name{font-weight:600;font-size:14px;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .stock-meta{font-size:12px;color:var(--ink-soft);margin-bottom:4px;}
+  .stock-code-row{display:flex;align-items:center;gap:6px;margin-top:2px;}
+  .stock-code{font-size:10.5px;color:var(--ink-soft);font-family:monospace;letter-spacing:0.3px;}
+  .price{font-weight:700;color:var(--sky-deep);}
+  .variant-grid{display:grid;grid-template-columns:repeat(3, 1fr);gap:8px;margin:10px 0;}
+  .variant-cell{border:1px solid var(--line);border-radius:10px;padding:8px 6px;text-align:center;background:#fff;}
+  .variant-cell-size{font-size:11px;font-weight:700;letter-spacing:0.3px;color:var(--ink-soft);text-transform:uppercase;margin-bottom:3px;}
+  .variant-cell-stock{font-size:19px;font-weight:700;}
+  .variant-size{width:38px;flex-shrink:0;font-weight:600;color:var(--ink-soft);}
+  .variant-stock{flex:1;font-weight:600;}
+  .stock-actions{display:flex;gap:8px;margin-top:8px;}
+  .btn-sm{padding:5px 10px;font-size:12px;border-radius:10px;}
+  .mini-btn{width:20px;height:20px;border-radius:50%;border:1px solid var(--line);background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;flex-shrink:0;}
+
+  .vente-layout{display:grid;grid-template-columns:1.5fr 1fr;gap:18px;align-items:start;}
+  .vente-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px;}
+  .vente-tile{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px;box-shadow:0 2px 8px rgba(59,54,44,0.05);}
+  .vente-tile-name{font-size:12.5px;font-weight:600;margin-top:8px;line-height:1.2;}
+  .vente-tile-meta{font-size:11.5px;color:var(--ink-soft);margin:2px 0;}
+  .size-chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;}
+  .size-chip{border:1px solid var(--line);background:#fff;border-radius:7px;padding:3px 6px;font-size:11px;font-weight:600;cursor:pointer;color:var(--ink);}
+  .size-chip:disabled{opacity:0.35;cursor:not-allowed;text-decoration:line-through;}
+  .size-chip:not(:disabled):hover{background:var(--sky);color:#fff;border-color:var(--sky-deep);}
+
+  .cart{position:sticky;top:16px;}
+  .cart-row{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+  .qty-btn{width:22px;height:22px;border-radius:50%;border:1px solid var(--line);background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;}
+  .cart-total{border-top:1px solid var(--line);padding-top:12px;display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+  .cart-total-value{font-family:'Fraunces',serif;font-size:22px;font-weight:700;color:var(--coral-deep);}
+
+  details{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 16px;margin-bottom:10px;}
+  summary{display:flex;justify-content:space-between;cursor:pointer;font-size:13.5px;list-style:none;}
+  summary::-webkit-details-marker{display:none;}
+  .vente-detail-row{display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;}
+
+  .modal-backdrop{position:fixed;inset:0;background:rgba(59,54,44,0.35);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px;}
+  .modal{background:var(--card);border-radius:20px;padding:24px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:0 12px 40px rgba(59,54,44,0.25);}
+  .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
+  .modal-close{background:none;border:none;cursor:pointer;color:var(--ink-soft);}
+  .field{display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--ink-soft);margin-bottom:12px;}
+  .field-row{display:flex;gap:10px;}
+  .hint{font-size:11.5px;color:var(--ink-soft);margin-top:-6px;margin-bottom:12px;}
+  .modal-actions{display:flex;gap:10px;margin-top:8px;}
+
+  .variant-editor{border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:12px;}
+  .variant-editor-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+  .variant-editor-row input{flex:1;}
+  .variant-editor-row input.taille-input{max-width:80px;flex:none;}
+  .add-size-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;}
+  .add-size-btn{border:1px dashed var(--line);background:#fff;border-radius:8px;padding:5px 9px;font-size:11.5px;cursor:pointer;color:var(--ink-soft);}
+
+  .color-block{border:1.5px solid var(--sky);border-radius:14px;padding:14px;margin-bottom:14px;background:#fff;}
+  .color-block-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+  .color-block-title{font-family:'Fraunces',serif;font-weight:600;font-size:14px;color:var(--sky-deep);}
+  .color-preview-row{display:flex;gap:10px;align-items:center;margin-bottom:10px;}
+  .discount-badge{display:inline-block;background:var(--coral);color:#fff;font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:6px;margin-left:6px;}
+  .price-preview{font-size:12px;color:var(--ink-soft);margin-top:-6px;margin-bottom:10px;}
+  .price-preview b{color:var(--coral-deep);font-size:14px;}
+
+  .loading-screen{display:flex;align-items:center;justify-content:center;height:100vh;color:var(--ink-soft);font-size:14px;}
+
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);color:#fff;padding:12px 20px;border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,0.2);display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:600;z-index:100;max-width:90vw;text-align:center;animation:toast-in 0.2s ease;}
+  @keyframes toast-in{from{opacity:0;transform:translate(-50%,10px);}to{opacity:1;transform:translate(-50%,0);}}
+
+  .sale-confirm{display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px;padding:36px 12px;color:var(--sage);animation:toast-in 0.25s ease;}
+  .sale-confirm svg{width:40px;height:40px;}
+  .sale-confirm-title{font-family:'Fraunces',serif;font-size:19px;font-weight:700;color:var(--ink);}
+  .sale-confirm-detail{font-size:13px;color:var(--ink-soft);}
+
+  .mini-cart-bar{display:none;}
+
+  html{overflow-x:hidden;}
+  body{overflow-x:hidden;}
+  /* Flex/grid items default to a content-based minimum width that can silently
+     force horizontal overflow on narrow screens, even with width:100% set.
+     This is the actual root cause of the mobile overflow — fix it globally. */
+  select, input, .field, .vente-layout > *, .grid2 > *, .cart-row, .cart-row > div{ min-width:0; }
+
+  @media (max-width: 720px){
+    .grid2, .vente-layout{grid-template-columns:1fr;}
+  }
+
+  @media (max-width: 600px){
+    .header{padding:16px 14px 34px;}
+    .header-row{flex-direction:column;align-items:center;text-align:center;}
+    .logo{flex-direction:column;}
+    .logo-badge{height:56px;padding:6px 12px;}
+    .logo-sub{display:none;}
+    .nav-btn{padding:8px 12px;font-size:12.5px;}
+    .container{padding:0 12px 32px;}
+
+    .stat-row{gap:10px;}
+    .stat-card{flex:1 1 calc(50% - 10px);min-width:0;padding:14px 14px;}
+    .stat-value{font-size:22px;}
+
+    .toolbar{gap:8px;}
+    .search-wrap{max-width:none;flex:1 1 100%;}
+
+    .field-row{flex-direction:column;gap:10px;}
+    .field-row .field{width:100%;}
+
+    .stock-grid{grid-template-columns:1fr;}
+    .vente-grid{grid-template-columns:repeat(2, 1fr);gap:8px;}
+    .vente-tile{padding:8px;}
+
+    .stock-top{gap:8px;}
+    .stock-actions{flex-wrap:wrap;}
+
+    .modal{padding:18px;max-width:100%;}
+
+    .variant-editor-row{flex-wrap:wrap;}
+    .variant-editor-row input.taille-input{max-width:none;flex:1 1 90px;}
+
+    table, .panel{max-width:100%;}
+    .sale-row{flex-wrap:wrap;gap:4px;}
+
+    .mini-cart-bar{
+      display:flex;align-items:center;justify-content:center;gap:8px;
+      position:fixed;left:12px;right:12px;bottom:14px;z-index:90;
+      background:var(--sage);color:#fff;border:none;border-radius:999px;
+      padding:13px;font-size:13.5px;font-weight:700;box-shadow:0 6px 20px rgba(0,0,0,0.25);
+      cursor:pointer;
+    }
+  }
+</style>
+</head>
+<body>
+<div id="app"><div class="loading-screen">Chargement de la boutique…</div></div>
+
+<script>
+// ---------- Config ----------
+const SUPABASE_URL = 'https://gjscutixskrpwyhfjjys.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_uaHRXQIvB7hRmuuZEsDlcw_nbE6agz2';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const COLLECTIONS = ["T-shirts","Hoodies","Vestes zippées","Casquettes et bonnets","Sacs","Porte-clés motel","Pin's émaillés","Stickers","Carte cadeau"];
+const SIZE_ORDER = ["XS","S","M","L","XL","XXL","Unique"];
+const STANDARD_SIZES = ["XS","S","M","L","XL","XXL"];
+const MODES_REGLEMENT = ['CB','Espèces','Carte cadeau'];
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+
+function sizeRank(t){
+  const i = SIZE_ORDER.indexOf(t);
+  return i === -1 ? 99 : i;
+}
+function sortVariants(variants){
+  return [...variants].sort((a,b) => sizeRank(a.taille) - sizeRank(b.taille));
+}
+
+const ICONS = {
+  home: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l9-9 9 9"/><path d="M5 10v10a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-4h2v4a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1V10"/></svg>',
+  package: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3.3 7.6l8.7 4.7 8.7-4.7"/><path d="M12 22V12"/></svg>',
+  bag: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2l1.5 4h9L18 2"/><path d="M4 6h16l-1.4 13.2a2 2 0 0 1-2 1.8H7.4a2 2 0 0 1-2-1.8L4 6z"/></svg>',
+  history: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/><path d="M12 7v5l3 3"/></svg>',
+  plus: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+  minus: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M5 12h14"/></svg>',
+  trash: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>',
+  search: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.3-4.3"/></svg>',
+  alert: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>',
+  x: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>',
+  imageOff: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2l20 20"/><path d="M10.4 4H19a2 2 0 0 1 2 2v12.6"/><path d="M4 6.4V19a2 2 0 0 0 2 2h12.6"/><circle cx="9" cy="9" r="2"/></svg>',
+  check: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>',
+  wave: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 15c2 0 2-3 4-3s2 3 4 3 2-3 4-3 2 3 4 3 2-3 4-3"/><path d="M2 20c2 0 2-3 4-3s2 3 4 3 2-3 4-3 2 3 4 3 2-3 4-3"/></svg>',
+  cash: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M6 6v0M18 18v0"/></svg>',
+  camera: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>',
+  user: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>',
+  mail: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 6l10 7 10-7"/></svg>',
+  eye: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>',
+  eyeOff: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.9 17.9A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a20.3 20.3 0 0 1 5.1-5.9M9.9 4.24A9.1 9.1 0 0 1 12 4c7 0 11 8 11 8a20.3 20.3 0 0 1-2.7 3.9M14.12 14.12a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/></svg>'
+};
+
+function euros(n){
+  return (Number(n)||0).toLocaleString('fr-FR', { style:'currency', currency:'EUR' });
+}
+function escapeHtml(s){
+  return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function uid(){ return Math.random().toString(36).slice(2,10); }
+function qrUrl(code, size){ return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(code)}`; }
+function randomCode(){ return 'BB-' + Math.floor(1000 + Math.random()*9000); }
+function prixRemise(color){
+  const prix = Number(color.prix) || 0;
+  const remise = Number(color.remise) || 0;
+  return +(prix * (1 - remise/100)).toFixed(2);
+}
+
+async function withRetry(fn, retries){
+  retries = retries == null ? 1 : retries;
+  try{ return await fn(); }
+  catch(err){
+    if (retries > 0){
+      await new Promise(r => setTimeout(r, 900));
+      return withRetry(fn, retries - 1);
+    }
+    throw err;
+  }
+}
+
+// ---------- State ----------
+let state = {
+  tab: 'dashboard',
+  articles: [], // { id, nom, collection, seuil, colors:[{id,couleur,code,prix,remise,photo,variants:[{id,taille,stock}]}] }
+  ventes: [],
+  clotures: [],
+  lieux: [],
+  clients: [],
+  clientSearch: '',
+  clientLetter: 'Toutes',
+  showClientForm: false,
+  editingClient: null,
+  selectedClientId: null,
+  clientPickerQuery: '',
+  loading: true,
+  error: null,
+  collectionFilter: 'Toutes',
+  search: '',
+  ventesearch: '',
+  stocksearch: '',
+  panier: [], // {colorId, taille, qty}
+  lieuVente: 'Magasin',
+  reglements: [{ mode: 'CB', montant: 0 }],
+  reglementModeTouched: false,
+  toast: null,
+  saleConfirmation: null,
+  scanPendingColor: null,
+  newLieuName: '',
+  showLieuManager: false,
+  showForm: false,
+  editing: null, // article being edited
+  formColors: [], // {key, dbId, couleur, code, prix, remise, photo, variants:[{key,dbId,taille,stock}]}
+  confirmDelete: null,
+  saving: false,
+  caisseDate: todayStr(),
+  caisseLieu: 'Magasin',
+  caisseFondCaisse: '',
+  caisseComptageReel: '',
+  caisseNote: '',
+  exportFrom: '',
+  exportTo: '',
+  exportLieu: 'Tous',
+  session: null,
+  authChecking: true,
+  authMode: 'login',
+  authError: null,
+  authSaving: false,
+};
+
+function totalStock(article){
+  return article.colors.reduce((s,c) => s + c.variants.reduce((s2,v) => s2 + v.stock, 0), 0);
+}
+function lowEntries(article){
+  const out = [];
+  article.colors.forEach(c => c.variants.forEach(v => { if (v.stock <= article.seuil) out.push({ color:c, variant:v }); }));
+  return out;
+}
+function stockValueOf(article){
+  return article.colors.reduce((s,c) => s + c.variants.reduce((s2,v) => s2 + v.stock, 0) * prixRemise(c), 0);
+}
+function stockCostValueOf(article){
+  return article.colors.reduce((s,c) => s + c.variants.reduce((s2,v) => s2 + v.stock, 0) * (Number(c.prix_achat)||0), 0);
+}
+
+// ---------- Data loading ----------
+async function loadAll(){
+  state.loading = true; render();
+  try{
+    const [{ data: articles, error: e1 }, { data: ventes, error: e2 }, { data: clotures, error: e3 }, { data: lieux, error: e4 }, { data: clients, error: e5 }] = await Promise.all([
+      withRetry(() => sb.from('articles').select('*, article_colors(*, article_variants(*))').order('created_at', { ascending: false })),
+      withRetry(() => sb.from('ventes').select('*').order('date', { ascending: false }).limit(500)),
+      withRetry(() => sb.from('cloture_caisse').select('*')),
+      withRetry(() => sb.from('lieux_vente').select('*').order('created_at', { ascending: true })),
+      withRetry(() => sb.from('clients').select('*').order('nom', { ascending: true }))
+    ]);
+    if (e1) throw e1;
+    if (e2) throw e2;
+    if (e3) throw e3;
+    if (e4) throw e4;
+    if (e5) throw e5;
+    state.articles = (articles || []).map(a => ({
+      id: a.id, nom: a.nom, collection: a.collection, seuil: a.seuil,
+      colors: (a.article_colors || []).map(c => ({
+        id: c.id, couleur: c.couleur, code: c.code, prix: Number(c.prix), prix_achat: Number(c.prix_achat||0), remise: Number(c.remise||0), photo: c.photo,
+        variants: sortVariants((c.article_variants || []).map(v => ({ id: v.id, taille: v.taille, stock: v.stock })))
+      }))
+    }));
+    state.ventes = ventes || [];
+    state.clotures = clotures || [];
+    state.lieux = lieux || [];
+    state.clients = clients || [];
+    if (!state.lieux.some(l => l.nom === state.lieuVente) && state.lieux.length) state.lieuVente = state.lieux[0].nom;
+    if (!state.lieux.some(l => l.nom === state.caisseLieu) && state.lieux.length) state.caisseLieu = state.lieux[0].nom;
+    prefillCaisseForm();
+    state.error = null;
+  } catch(err){
+    console.error(err);
+    state.error = "Impossible de charger les données depuis Supabase. Vérifie la connexion.";
+  }
+  state.loading = false;
+  render();
+}
+
+// ---------- Flattened product cards (article x color) ----------
+function flattenCards(){
+  const cards = [];
+  state.articles.forEach(a => a.colors.forEach(c => cards.push({ article: a, color: c })));
+  return cards;
+}
+function matchesQuery(a, c, query){
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  return a.nom.toLowerCase().includes(q) || (c.code||'').toLowerCase().includes(q) || (c.couleur||'').toLowerCase().includes(q);
+}
+function filteredCards(query){
+  return flattenCards().filter(({article:a, color:c}) => {
+    const matchCol = state.collectionFilter === 'Toutes' || a.collection === state.collectionFilter;
+    return matchCol && matchesQuery(a, c, query);
+  });
+}
+function findColorById(colorId){
+  for (const a of state.articles){
+    const c = a.colors.find(x => x.id === colorId);
+    if (c) return { article: a, color: c };
+  }
+  return null;
+}
+function findVariant(colorId, taille){
+  const found = findColorById(colorId);
+  return found ? found.color.variants.find(v => v.taille === taille) : null;
+}
+
+// ---------- Actions: navigation ----------
+function setTab(t){ state.tab = t; state.confirmDelete = null; render(); }
+function setCollectionFilter(c){ state.collectionFilter = c; render(); }
+
+function renderPreservingFocus(){
+  const active = document.activeElement;
+  const id = active && active.id;
+  const pos = active && typeof active.selectionStart === 'number' ? active.selectionStart : null;
+  render();
+  if (id){
+    const el = document.getElementById(id);
+    if (el){
+      el.focus();
+      if (pos != null){
+        try { el.setSelectionRange(pos,pos); } catch(e) {}
+      }
+    }
+  }
+}
+function onSearchInput(e){ state.search = e.target.value; renderPreservingFocus(); }
+function onVenteSearchInput(e){ state.ventesearch = e.target.value; renderPreservingFocus(); }
+
+function showToast(message, kind){
+  state.toast = { message, kind: kind || 'success' };
+  render();
+  setTimeout(() => { state.toast = null; render(); }, 3800);
+}
+
+function setLieuVente(l){ state.lieuVente = l; render(); }
+function toggleLieuManager(){ state.showLieuManager = !state.showLieuManager; render(); }
+function updateNewLieuName(v){ state.newLieuName = v; }
+async function addLieuVente(){
+  const nom = (state.newLieuName || '').trim();
+  if (!nom) return;
+  try{
+    const { error } = await sb.from('lieux_vente').insert({ nom });
+    if (error) throw error;
+    state.newLieuName = '';
+    await loadAll();
+  } catch(err){
+    showToast("Impossible d'ajouter ce lieu : " + err.message, 'error');
+  }
+}
+async function deleteLieuVente(id, nom){
+  if (!confirm(`Supprimer le lieu de vente "${nom}" ? (les ventes déjà enregistrées gardent leur historique)`)) return;
+  try{
+    const { error } = await sb.from('lieux_vente').delete().eq('id', id);
+    if (error) throw error;
+    await loadAll();
+  } catch(err){
+    showToast('Erreur lors de la suppression : ' + err.message, 'error');
+  }
+}
+
+// ---------- Clients ----------
+function onClientSearchInput(e){ state.clientSearch = e.target.value; updateClientsGridDisplay(); }
+function filteredClients(){
+  const q = state.clientSearch.trim().toLowerCase();
+  let list = state.clients;
+  if (state.clientLetter && state.clientLetter !== 'Toutes'){
+    list = list.filter(c => (c.nom||'').trim().charAt(0).toUpperCase() === state.clientLetter);
+  }
+  if (q){
+    list = list.filter(c =>
+      nameWordStartsWith(c.nom, q) ||
+      nameWordStartsWith(c.prenom, q) ||
+      (c.email||'').toLowerCase().includes(q) ||
+      (c.telephone||'').toLowerCase().includes(q)
+    );
+  }
+  return [...list].sort((a,b) => (a.nom||'').localeCompare(b.nom||'', 'fr'));
+}
+function setClientLetter(l){ state.clientLetter = l; render(); }
+function clientLettersAvailable(){
+  return new Set(state.clients.map(c => (c.nom||'').trim().charAt(0).toUpperCase()).filter(Boolean));
+}
+function openAddClientForm(){ state.editingClient = null; state.showClientForm = true; render(); }
+function openEditClientForm(id){
+  const c = state.clients.find(x => x.id === id);
+  if (!c) return;
+  state.editingClient = c;
+  state.showClientForm = true;
+  render();
+}
+function closeClientForm(){ state.showClientForm = false; state.editingClient = null; render(); }
+async function saveClientForm(e){
+  e.preventDefault();
+  const f = e.target;
+  const payload = {
+    nom: f.nom.value.trim(),
+    prenom: f.prenom.value.trim(),
+    adresse: f.adresse.value.trim(),
+    code_postal: f.code_postal.value.trim(),
+    ville: f.ville.value.trim(),
+    telephone: f.telephone.value.trim().replace(/\s+/g, ''),
+    email: f.email.value.trim(),
+  };
+  if (!payload.nom){ return; }
+  state.saving = true; render();
+  try{
+    if (state.editingClient){
+      const { error } = await sb.from('clients').update(payload).eq('id', state.editingClient.id);
+      if (error) throw error;
+    } else {
+      const { error } = await sb.from('clients').insert(payload);
+      if (error) throw error;
+    }
+    state.showClientForm = false;
+    state.editingClient = null;
+    await loadAll();
+  } catch(err){
+    showToast("Erreur lors de l'enregistrement du client : " + err.message, 'error');
+  }
+  state.saving = false;
+  render();
+}
+async function deleteClient(id, nom){
+  if (!confirm(`Supprimer la fiche client "${nom}" ?`)) return;
+  try{
+    const { error } = await sb.from('clients').delete().eq('id', id);
+    if (error) throw error;
+    if (state.selectedClientId === id) state.selectedClientId = null;
+    await loadAll();
+  } catch(err){
+    showToast('Erreur lors de la suppression : ' + err.message, 'error');
+  }
+}
+function exportClientsExcel(){
+  if (state.clients.length === 0){ showToast('Aucun client à exporter.', 'error'); return; }
+  const data = state.clients.map(c => ({
+    'Nom': c.nom || '', 'Prénom': c.prenom || '', 'Adresse': c.adresse || '',
+    'Code postal': c.code_postal || '', 'Ville': c.ville || '',
+    'Téléphone': c.telephone || '', 'Email': c.email || '',
+  }));
+  const ws = XLSX.utils.json_to_sheet(data);
+  ws['!cols'] = [{wch:16},{wch:14},{wch:30},{wch:10},{wch:18},{wch:16},{wch:26}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Clients');
+  XLSX.writeFile(wb, 'clients-bebeach.xlsx');
+}
+async function copyAllClientEmails(){
+  const emails = [...new Set(state.clients.map(c => (c.email||'').trim()).filter(Boolean))];
+  if (emails.length === 0){ showToast('Aucune adresse mail enregistrée.', 'error'); return; }
+  const text = emails.join('; ');
+  try{
+    await navigator.clipboard.writeText(text);
+    showToast(`${emails.length} adresse(s) mail copiée(s) — colle-les dans ton client mail.`, 'success');
+  } catch(err){
+    // Clipboard API unavailable/blocked: show a selectable textarea as fallback
+    showClientEmailsFallback(text, emails.length);
+  }
+}
+function showClientEmailsFallback(text, count){
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px;';
+  overlay.innerHTML = `
+    <div style="background:#FFFDF8;border-radius:16px;padding:18px;max-width:460px;width:100%;">
+      <div style="font-family:'Fraunces',serif;font-weight:600;margin-bottom:8px;">${count} adresse(s) mail</div>
+      <div style="font-size:12px;color:#7A7362;margin-bottom:8px;">Sélectionne tout (ou copie manuellement) puis colle dans ton client mail.</div>
+      <textarea readonly style="width:100%;height:120px;border:1px solid #E9DFC7;border-radius:10px;padding:8px;font-size:12.5px;" onclick="this.select()">${text}</textarea>
+      <button style="margin-top:10px;width:100%;padding:10px;border:none;border-radius:12px;background:#E4886B;color:#fff;font-weight:600;cursor:pointer;" onclick="this.closest('div[style*=fixed]').remove()">Fermer</button>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.querySelector('textarea').focus();
+  overlay.querySelector('textarea').select();
+}
+
+// ---------- Client picker in cart ----------
+function setSelectedClient(id){ state.selectedClientId = id || null; render(); }
+function onClientPickerInput(e){ state.clientPickerQuery = e.target.value; renderPreservingFocus(); }
+function clientLabel(c){ return `${c.prenom||''} ${c.nom||''}`.trim() || c.email || c.telephone || 'Client'; }
+function findClientById(id){ return id ? state.clients.find(c => c.id === id) : null; }
+
+function nameWordStartsWith(name, q){
+  return (name||'').toLowerCase().split(/[\s-]+/).some(word => word.startsWith(q));
+}
+function computeClientMatches(q){
+  q = (q||'').trim().toLowerCase();
+  if (!q) return [];
+  return state.clients.filter(c =>
+    nameWordStartsWith(c.nom, q) || nameWordStartsWith(c.prenom, q) ||
+    (c.email||'').toLowerCase().includes(q) || (c.telephone||'').toLowerCase().includes(q)
+  ).slice(0, 6);
+}
+function clientMatchesHtml(q){
+  const matches = computeClientMatches(q);
+  if (matches.length > 0){
+    return `<div style="border:1px solid var(--line);border-radius:10px;margin-top:4px;overflow:hidden;">
+      ${matches.map(c => `
+        <div onclick="setSelectedClient('${c.id}')" style="padding:8px 10px;font-size:13px;cursor:pointer;border-bottom:1px solid var(--line);">
+          <div style="font-weight:600;">${escapeHtml(clientLabel(c))}</div>
+          <div class="muted" style="font-size:11.5px;">${escapeHtml(c.email||c.telephone||'')}</div>
+        </div>`).join('')}
+    </div>`;
+  }
+  return q.trim() ? `<div class="muted" style="font-size:12px;margin-top:4px;">Aucun client trouvé pour "${escapeHtml(q.trim())}".</div>` : '';
+}
+function onClientPickerInput(e){
+  // Update the results list directly (without calling render()) so the input
+  // element itself is never recreated — recreating it resets the on-screen
+  // keyboard to its default layout on mobile, which is what caused the
+  // numeric keypad to keep flipping back to letters after each digit.
+  state.clientPickerQuery = e.target.value;
+  const resultsEl = document.getElementById('client-picker-results');
+  if (resultsEl) resultsEl.innerHTML = clientMatchesHtml(state.clientPickerQuery);
+}
+
+function renderClientPicker(){
+  const selected = findClientById(state.selectedClientId);
+
+  return `
+  <div class="field" style="margin-bottom:14px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <span>Client (facultatif)</span>
+      <a href="#" onclick="event.preventDefault();openAddClientForm()" style="font-size:11px;color:var(--sky-deep);">+ Nouveau client</a>
+    </div>
+    ${selected ? `
+      <div style="display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:#fff;">
+        ${ICONS.user}
+        <div style="flex:1;min-width:0;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(clientLabel(selected))}</div>
+        <button type="button" class="mini-btn" onclick="setSelectedClient(null)">${ICONS.x}</button>
+      </div>
+    ` : `
+      <input id="client-picker-input" class="input" placeholder="Chercher un client (nom, email, tél.)..." value="${escapeHtml(state.clientPickerQuery)}" oninput="onClientPickerInput(event)" />
+      <div id="client-picker-results">${clientMatchesHtml(state.clientPickerQuery)}</div>
+    `}
+  </div>`;
+}
+function renderAlphabetTabs(){
+  const available = clientLettersAvailable();
+  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+  return `<div class="pills">
+    ${Pill('Toutes', state.clientLetter==='Toutes', "setClientLetter('Toutes')")}
+    ${letters.map(l => {
+      const has = available.has(l);
+      const active = state.clientLetter===l;
+      return `<button class="pill ${active?'active':''}" ${has?'':'disabled style="opacity:0.35;cursor:default;"'} onclick="${has ? `setClientLetter('${l}')` : ''}">${l}</button>`;
+    }).join('')}
+  </div>`;
+}
+
+function renderClientsGridHtml(){
+  const list = filteredClients();
+  return `
+    <div class="stock-grid">
+      ${list.map(c => `
+        <div class="stock-card">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px;">
+            <div>
+              <div class="stock-name">${escapeHtml(clientLabel(c))}</div>
+              ${c.email ? `<div class="stock-meta">${ICONS.mail} ${escapeHtml(c.email)}</div>` : ''}
+              ${c.telephone ? `<div class="stock-meta">${escapeHtml(c.telephone)}</div>` : ''}
+              ${(c.adresse || c.code_postal || c.ville) ? `<div class="muted" style="font-size:11.5px;margin-top:4px;">${escapeHtml(c.adresse||'')}${c.adresse && (c.code_postal||c.ville) ? ', ' : ''}${escapeHtml([c.code_postal, c.ville].filter(Boolean).join(' '))}</div>` : ''}
+            </div>
+          </div>
+          <div class="stock-actions">
+            <button class="btn btn-outline btn-sm" onclick="openEditClientForm('${c.id}')">Modifier</button>
+            ${state.confirmDelete===('client-'+c.id)
+              ? `<button class="btn btn-sm" style="background:var(--coral-deep);color:#fff;" onclick="deleteClient('${c.id}','${escapeHtml(clientLabel(c)).replace(/'/g,"\\'")}')">Confirmer ?</button>`
+              : `<button class="btn btn-outline btn-sm" style="color:var(--coral-deep);padding:5px 8px;" onclick="askDelete('client-${c.id}')">${ICONS.trash}</button>`}
+          </div>
+        </div>`).join('')}
+    </div>
+    ${list.length===0 ? `<div class="muted" style="margin-top:20px;">${state.clients.length===0 ? "Aucun client enregistré pour le moment." : "Aucun client ne correspond."}</div>` : ''}
+  `;
+}
+function updateClientsGridDisplay(){
+  const el = document.getElementById('clients-grid-wrapper');
+  if (el) el.innerHTML = renderClientsGridHtml();
+}
+function renderClients(){
+  return `
+  <div style="margin-top:8px;">
+    <div class="toolbar">
+      ${SearchBox('client-search-input', state.clientSearch, 'onClientSearchInput', 'Rechercher par nom, email ou téléphone...')}
+      <button class="btn btn-outline btn-sm" onclick="copyAllClientEmails()" style="display:flex;align-items:center;gap:6px;">${ICONS.mail} Copier tous les emails</button>
+      <button class="btn btn-outline btn-sm" onclick="exportClientsExcel()">Exporter (Excel)</button>
+      <button class="btn btn-coral" onclick="openAddClientForm()" style="display:flex;align-items:center;gap:6px;">${ICONS.plus} Nouveau client</button>
+    </div>
+    ${renderAlphabetTabs()}
+    <div id="clients-grid-wrapper">${renderClientsGridHtml()}</div>
+  </div>`;
+}
+
+function renderClientForm(){
+  if (!state.showClientForm) return '';
+  const c = state.editingClient || { nom:'', prenom:'', adresse:'', code_postal:'', ville:'', telephone:'', email:'' };
+  return `
+  <div class="modal-backdrop" onclick="if(event.target===this) closeClientForm()">
+    <div class="modal" style="max-width:420px;">
+      <div class="modal-header">
+        <div class="serif" style="font-size:19px;font-weight:600;">${state.editingClient ? 'Modifier le client' : 'Nouveau client'}</div>
+        <button class="modal-close" onclick="closeClientForm()">${ICONS.x}</button>
+      </div>
+      <form onsubmit="saveClientForm(event)">
+        <div class="field-row">
+          <label class="field" style="flex:1;">Nom
+            <input class="input" name="nom" required value="${escapeHtml(c.nom)}" />
+          </label>
+          <label class="field" style="flex:1;">Prénom
+            <input class="input" name="prenom" value="${escapeHtml(c.prenom||'')}" />
+          </label>
+        </div>
+        <label class="field">Adresse
+          <input class="input" name="adresse" value="${escapeHtml(c.adresse||'')}" placeholder="N° et nom de rue" />
+        </label>
+        <div class="field-row">
+          <label class="field" style="flex:1;">Code postal
+            <input class="input" name="code_postal" value="${escapeHtml(c.code_postal||'')}" placeholder="44500" />
+          </label>
+          <label class="field" style="flex:2;">Ville
+            <input class="input" name="ville" value="${escapeHtml(c.ville||'')}" placeholder="Saint-Nazaire" />
+          </label>
+        </div>
+        <div class="field-row">
+          <label class="field" style="flex:1;">Téléphone
+            <input class="input" name="telephone" value="${escapeHtml(c.telephone||'')}" placeholder="06 12 34 56 78" />
+          </label>
+          <label class="field" style="flex:1;">Email
+            <input class="input" name="email" type="email" value="${escapeHtml(c.email||'')}" placeholder="nom@exemple.fr" />
+          </label>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline" style="flex:1;" onclick="closeClientForm()">Annuler</button>
+          <button type="submit" class="btn btn-coral" style="flex:1;" ${state.saving?'disabled':''}>${state.saving ? 'Enregistrement…' : 'Enregistrer'}</button>
+        </div>
+      </form>
+    </div>
+  </div>`;
+}
+
+// ---------- Scan to add (camera QR/barcode + hardware scanner input) ----------
+function lookupAndAddByCode(code){
+  const trimmed = (code || '').trim();
+  if (!trimmed) return;
+  const found = flattenCards().find(({color:c}) => (c.code||'').toLowerCase() === trimmed.toLowerCase());
+  if (!found){
+    showToast(`Aucun article trouvé pour le code "${trimmed}"`, 'error');
+    return;
+  }
+  const { article, color } = found;
+  const inStock = color.variants.filter(v => v.stock > 0);
+  if (color.variants.length === 1){
+    addToPanier(color.id, color.variants[0].taille);
+    showToast(`Ajouté au panier : ${article.nom} (${color.couleur})`, 'success');
+  } else if (inStock.length === 1){
+    addToPanier(color.id, inStock[0].taille);
+    showToast(`Ajouté au panier : ${article.nom} (${color.couleur}) — ${inStock[0].taille}`, 'success');
+  } else if (inStock.length === 0){
+    showToast(`"${article.nom}" (${color.couleur}) est en rupture sur toutes les tailles`, 'error');
+  } else {
+    state.scanPendingColor = color.id;
+    render();
+    const cartEl = document.getElementById('cart-panel');
+    if (cartEl) cartEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+function pickScanSize(colorId, taille){
+  addToPanier(colorId, taille);
+  state.scanPendingColor = null;
+  render();
+}
+function cancelScanPending(){ state.scanPendingColor = null; render(); }
+function onScanInputKeydown(e){
+  if (e.key === 'Enter'){
+    e.preventDefault();
+    lookupAndAddByCode(e.target.value);
+    e.target.value = '';
+  }
+}
+function lookupAndEditByCode(code){
+  const trimmed = (code || '').trim();
+  if (!trimmed) return;
+  const found = flattenCards().find(({color:c}) => (c.code||'').toLowerCase() === trimmed.toLowerCase());
+  if (!found){
+    showToast(`Aucun article trouvé pour le code "${trimmed}"`, 'error');
+    return;
+  }
+  showToast(`Article trouvé : ${found.article.nom}`, 'success');
+  openEditForm(found.article.id);
+}
+function onStockScanInputKeydown(e){
+  if (e.key === 'Enter'){
+    e.preventDefault();
+    lookupAndEditByCode(e.target.value);
+    e.target.value = '';
+  }
+}
+
+let html5QrCodeInstance = null;
+function openScanner(mode){
+  if (typeof Html5Qrcode === 'undefined'){
+    showToast('Le scanner ne peut pas se charger (connexion internet nécessaire).', 'error');
+    return;
+  }
+  const overlay = document.createElement('div');
+  overlay.id = 'scanner-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px;';
+  overlay.innerHTML = `
+    <div style="background:#FFFDF8;border-radius:16px;padding:16px;max-width:420px;width:100%;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <div style="font-family:'Fraunces',serif;font-weight:600;color:#3B362C;">Scanner un article</div>
+        <button id="scanner-close-btn" style="background:none;border:none;font-size:22px;cursor:pointer;color:#3B362C;line-height:1;">×</button>
+      </div>
+      <div id="qr-reader" style="width:100%;"></div>
+      <div style="font-size:12px;color:#7A7362;margin-top:8px;">Vise le QR code (ou code-barres) de l'article avec la caméra.</div>
+    </div>`;
+  document.body.appendChild(overlay);
+  document.getElementById('scanner-close-btn').onclick = closeScannerUI;
+
+  html5QrCodeInstance = new Html5Qrcode('qr-reader');
+  html5QrCodeInstance.start(
+    { facingMode: 'environment' },
+    { fps: 10, qrbox: { width: 230, height: 230 } },
+    (decodedText) => {
+      if (mode === 'stock') lookupAndEditByCode(decodedText);
+      else lookupAndAddByCode(decodedText);
+      closeScannerUI();
+    },
+    () => {}
+  ).catch((err) => {
+    showToast("Impossible d'accéder à la caméra : vérifie les autorisations du navigateur.", 'error');
+    closeScannerUI();
+    console.error(err);
+  });
+}
+function closeScannerUI(){
+  const overlay = document.getElementById('scanner-overlay');
+  const inst = html5QrCodeInstance;
+  html5QrCodeInstance = null;
+  if (inst){
+    inst.stop().then(() => inst.clear()).catch(() => {});
+  }
+  if (overlay) overlay.remove();
+}
+
+// ---------- Actions: article form ----------
+function newColorBlock(){
+  return { key: uid(), dbId: null, couleur: '', code: randomCode(), prix: '', prix_achat: '', remise: 0, photo: '', variants: [{ key: uid(), dbId: null, taille: 'Unique', stock: 0 }] };
+}
+function openAddForm(){
+  state.editing = null;
+  state.formColors = [newColorBlock()];
+  state.showForm = true;
+  render();
+}
+function openEditForm(articleId){
+  const a = state.articles.find(x => x.id === articleId);
+  if (!a) return;
+  state.editing = a;
+  state.formColors = a.colors.map(c => ({
+    key: uid(), dbId: c.id, couleur: c.couleur, code: c.code, prix: c.prix, prix_achat: c.prix_achat, remise: c.remise, photo: c.photo,
+    variants: c.variants.map(v => ({ key: uid(), dbId: v.id, taille: v.taille, stock: v.stock }))
+  }));
+  state.showForm = true;
+  render();
+}
+function closeForm(){ state.showForm = false; state.editing = null; state.formColors = []; render(); }
+
+function renderPreservingModalScroll(){
+  const modal = document.querySelector('.modal');
+  const scrollTop = modal ? modal.scrollTop : null;
+  render();
+  if (scrollTop != null){
+    const newModal = document.querySelector('.modal');
+    if (newModal) newModal.scrollTop = scrollTop;
+  }
+}
+
+function addColorBlock(){ state.formColors.push(newColorBlock()); renderPreservingModalScroll(); }
+function removeColorBlock(colorKey){
+  state.formColors = state.formColors.filter(c => c.key !== colorKey);
+  if (state.formColors.length === 0) state.formColors.push(newColorBlock());
+  renderPreservingModalScroll();
+}
+function findFormColor(colorKey){ return state.formColors.find(c => c.key === colorKey); }
+function updateColorField(colorKey, field, value){
+  const c = findFormColor(colorKey);
+  if (!c) return;
+  c[field] = value;
+  renderPreservingFocus();
+}
+function regenerateColorCode(colorKey){
+  const c = findFormColor(colorKey);
+  if (!c) return;
+  c.code = randomCode();
+  renderPreservingModalScroll();
+}
+
+function addVariantRowToColor(colorKey, taille){
+  const c = findFormColor(colorKey);
+  if (!c) return;
+  c.variants.push({ key: uid(), dbId: null, taille: taille || '', stock: 0 });
+  renderPreservingModalScroll();
+}
+function addAllStandardSizesToColor(colorKey){
+  const c = findFormColor(colorKey);
+  if (!c) return;
+  const existing = new Set(c.variants.map(v => v.taille));
+  STANDARD_SIZES.forEach(t => { if (!existing.has(t)) c.variants.push({ key: uid(), dbId: null, taille: t, stock: 0 }); });
+  renderPreservingModalScroll();
+}
+function removeVariantRowFromColor(colorKey, variantKey){
+  const c = findFormColor(colorKey);
+  if (!c) return;
+  c.variants = c.variants.filter(v => v.key !== variantKey);
+  renderPreservingModalScroll();
+}
+function updateColorVariantField(colorKey, variantKey, field, value){
+  const c = findFormColor(colorKey);
+  if (!c) return;
+  const v = c.variants.find(x => x.key === variantKey);
+  if (!v) return;
+  v[field] = field === 'stock' ? (parseInt(value) || 0) : value;
+}
+
+async function saveArticleForm(e){
+  e.preventDefault();
+  const f = e.target;
+  const articlePayload = {
+    nom: f.nom.value.trim(),
+    collection: f.collection.value,
+    seuil: parseInt(f.seuil.value) || 0,
+  };
+  if (!articlePayload.nom || state.formColors.length === 0) return;
+  const colorsToSave = state.formColors.filter(c => c.couleur.trim() !== '' && c.code.trim() !== '');
+  if (colorsToSave.length === 0){
+    alert('Ajoute au moins une couleur avec un nom et un code.');
+    return;
+  }
+
+  state.saving = true; render();
+  try{
+    let articleId;
+    if (state.editing){
+      articleId = state.editing.id;
+      const { error } = await sb.from('articles').update(articlePayload).eq('id', articleId);
+      if (error) throw error;
+
+      const originalColorIds = new Set(state.editing.colors.map(c => c.id));
+      const keptColorIds = new Set(colorsToSave.filter(c => c.dbId).map(c => c.dbId));
+      const colorsToDelete = [...originalColorIds].filter(id => !keptColorIds.has(id));
+      for (const id of colorsToDelete){
+        const { error: de } = await sb.from('article_colors').delete().eq('id', id);
+        if (de) throw de;
+      }
+    } else {
+      const { data, error } = await sb.from('articles').insert(articlePayload).select().single();
+      if (error) throw error;
+      articleId = data.id;
+    }
+
+    for (const c of colorsToSave){
+      const variantsToSave = c.variants.filter(v => v.taille.trim() !== '');
+      if (variantsToSave.length === 0) continue;
+      const colorPayload = {
+        article_id: articleId,
+        couleur: c.couleur.trim(),
+        code: c.code.trim(),
+        prix: parseFloat(c.prix) || 0,
+        prix_achat: parseFloat(c.prix_achat) || 0,
+        remise: parseFloat(c.remise) || 0,
+        photo: c.photo.trim(),
+      };
+      let colorId;
+      if (c.dbId){
+        colorId = c.dbId;
+        const { error: ce } = await sb.from('article_colors').update(colorPayload).eq('id', colorId);
+        if (ce) throw ce;
+        const originalColor = state.editing.colors.find(oc => oc.id === c.dbId);
+        const originalVariantIds = new Set((originalColor ? originalColor.variants : []).map(v => v.id));
+        const keptVariantIds = new Set(variantsToSave.filter(v => v.dbId).map(v => v.dbId));
+        const variantsToDelete = [...originalVariantIds].filter(id => !keptVariantIds.has(id));
+        for (const id of variantsToDelete){
+          const { error: dve } = await sb.from('article_variants').delete().eq('id', id);
+          if (dve) throw dve;
+        }
+      } else {
+        const { data: cdata, error: ce } = await sb.from('article_colors').insert(colorPayload).select().single();
+        if (ce) throw ce;
+        colorId = cdata.id;
+      }
+      for (const v of variantsToSave){
+        if (v.dbId){
+          const { error: ue } = await sb.from('article_variants').update({ taille: v.taille.trim(), stock: v.stock }).eq('id', v.dbId);
+          if (ue) throw ue;
+        } else {
+          const { error: ie } = await sb.from('article_variants').insert({ color_id: colorId, taille: v.taille.trim(), stock: v.stock });
+          if (ie) throw ie;
+        }
+      }
+    }
+
+    state.showForm = false;
+    state.editing = null;
+    state.formColors = [];
+    await loadAll();
+  } catch(err){
+    console.error(err);
+    alert("Erreur lors de l'enregistrement : " + err.message);
+  }
+  state.saving = false;
+  render();
+}
+
+function askDelete(id){ state.confirmDelete = id; render(); }
+function cancelDelete(){ state.confirmDelete = null; render(); }
+async function deleteArticle(id){
+  try{
+    const { error } = await sb.from('articles').delete().eq('id', id);
+    if (error) throw error;
+    const removedColorIds = new Set((state.articles.find(a=>a.id===id)?.colors||[]).map(c=>c.id));
+    state.panier = state.panier.filter(p => !removedColorIds.has(p.colorId));
+    await loadAll();
+  } catch(err){
+    alert("Erreur lors de la suppression : " + err.message);
+  }
+  state.confirmDelete = null;
+  render();
+}
+async function deleteColor(colorId, articleId){
+  const article = state.articles.find(a => a.id === articleId);
+  if (article && article.colors.length <= 1){
+    // Last remaining color: deleting it would leave an empty article, so remove the whole article instead.
+    return deleteArticle(articleId);
+  }
+  try{
+    const { error } = await sb.from('article_colors').delete().eq('id', colorId);
+    if (error) throw error;
+    state.panier = state.panier.filter(p => p.colorId !== colorId);
+    await loadAll();
+  } catch(err){
+    alert("Erreur lors de la suppression : " + err.message);
+  }
+  state.confirmDelete = null;
+  render();
+}
+
+async function adjustVariantStock(variantId, delta){
+  let targetVariant = null;
+  for (const a of state.articles){
+    for (const c of a.colors){
+      const v = c.variants.find(x => x.id === variantId);
+      if (v){ targetVariant = v; break; }
+    }
+    if (targetVariant) break;
+  }
+  if (!targetVariant) return;
+  const newStock = Math.max(0, targetVariant.stock + delta);
+  targetVariant.stock = newStock;
+  render();
+  try{
+    const { error } = await sb.from('article_variants').update({ stock: newStock }).eq('id', variantId);
+    if (error) throw error;
+  } catch(err){
+    console.error(err);
+    await loadAll();
+  }
+}
+
+// ---------- Actions: vente / panier ----------
+function addToPanier(colorId, taille){
+  const variant = findVariant(colorId, taille);
+  if (!variant) return;
+  const wasEmpty = state.panier.length === 0;
+  const existing = state.panier.find(p => p.colorId === colorId && p.taille === taille);
+  const currentQty = existing ? existing.qty : 0;
+  if (currentQty >= variant.stock) return;
+  if (existing) existing.qty += 1;
+  else state.panier.push({ colorId, taille, qty: 1 });
+  if (wasEmpty) state.reglementModeTouched = false;
+  recalcLastReglement();
+  render();
+  const cartEl = document.getElementById('cart-panel');
+  if (cartEl && window.innerWidth < 721) cartEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+function changeQty(colorId, taille, delta){
+  const variant = findVariant(colorId, taille);
+  const p = state.panier.find(x => x.colorId === colorId && x.taille === taille);
+  if (!p || !variant) return;
+  p.qty = Math.min(variant.stock, Math.max(0, p.qty + delta));
+  state.panier = state.panier.filter(x => x.qty > 0);
+  recalcLastReglement();
+  render();
+}
+function panierDetail(){
+  return state.panier.map(p => {
+    const found = findColorById(p.colorId);
+    return found ? { ...p, article: found.article, color: found.color } : null;
+  }).filter(Boolean);
+}
+function panierTotal(){
+  return panierDetail().reduce((s,p) => s + prixRemise(p.color) * p.qty, 0);
+}
+
+// ---------- Multi-payment (reglements) ----------
+function recalcLastReglement(){
+  const total = panierTotal();
+  if (state.reglements.length < 2){
+    state.reglements[0].montant = total;
+    return;
+  }
+  const others = state.reglements.slice(0, -1).reduce((s,r) => s + (parseFloat(r.montant) || 0), 0);
+  state.reglements[state.reglements.length - 1].montant = +(total - others).toFixed(2);
+}
+function addReglementLine(){
+  const usedModes = new Set(state.reglements.map(r => r.mode));
+  const nextMode = MODES_REGLEMENT.find(m => !usedModes.has(m)) || MODES_REGLEMENT[0];
+  state.reglements.push({ mode: nextMode, montant: 0 });
+  state.reglementModeTouched = true;
+  recalcLastReglement();
+  render();
+}
+function removeReglementLine(idx){
+  state.reglements.splice(idx,1);
+  if (state.reglements.length === 0) state.reglements.push({ mode:'CB', montant: 0 });
+  recalcLastReglement();
+  render();
+}
+function setReglementMode(idx, mode){ state.reglements[idx].mode = mode; state.reglementModeTouched = true; render(); }
+function updateReglementMontant(idx, value){
+  state.reglements[idx].montant = value === '' ? '' : parseFloat(value) || 0;
+  recalcLastReglement();
+  renderPreservingFocus();
+}
+function reglementsTotal(){
+  return state.reglements.reduce((s,r) => s + (parseFloat(r.montant) || 0), 0);
+}
+function reglementsRemaining(){
+  return +(panierTotal() - reglementsTotal()).toFixed(2);
+}
+
+async function encaisser(){
+  const detail = panierDetail();
+  if (detail.length === 0) return;
+  const total = panierTotal();
+  if (Math.abs(reglementsRemaining()) > 0.004){
+    alert("Le total des règlements (" + euros(reglementsTotal()) + ") ne correspond pas au total de la vente (" + euros(total) + "). Ajuste les montants avant d'encaisser.");
+    return;
+  }
+  const items = detail.map(p => ({ nom: p.article.nom, couleur: p.color.couleur, taille: p.taille, qty: p.qty, prixUnitaire: prixRemise(p.color) }));
+  const reglementsToSave = state.reglements.map(r => ({ mode: r.mode, montant: parseFloat(r.montant) || 0 }));
+  const lieu = state.lieuVente;
+  state.saving = true; render();
+  try{
+    const { error: e1 } = await withRetry(() => sb.from('ventes').insert({ date: new Date().toISOString(), items, total, reglements: reglementsToSave, lieu_vente: lieu, client_id: state.selectedClientId }));
+    if (e1) throw e1;
+    for (const p of detail){
+      const variant = findVariant(p.colorId, p.taille);
+      const { error: e2 } = await withRetry(() => sb.from('article_variants').update({ stock: variant.stock - p.qty }).eq('id', variant.id));
+      if (e2) throw e2;
+    }
+    state.panier = [];
+    state.reglements = [{ mode:'CB', montant: 0 }];
+    state.reglementModeTouched = false;
+    state.selectedClientId = null;
+    state.clientPickerQuery = '';
+    await loadAll();
+    const modesLabel = reglementsToSave.map(r => `${r.mode} ${euros(r.montant)}`).join(' + ');
+    state.saleConfirmation = { message: `Vente enregistrée · ${euros(total)}`, detail: `${modesLabel} · ${lieu}` };
+    render();
+    setTimeout(() => { state.saleConfirmation = null; render(); }, 4500);
+  } catch(err){
+    console.error(err);
+    const msg = /522|timeout|network|fetch/i.test(String(err.message||err))
+      ? "Le réseau a coupé un instant pendant l'encaissement. Vérifie l'onglet Historique : si la vente n'y est pas, réessaie."
+      : "Erreur lors de l'encaissement : " + err.message;
+    showToast(msg, 'error');
+  }
+  state.saving = false;
+  render();
+}
+
+// ---------- Caisse (end-of-day register check) ----------
+function dateOnly(iso){ return String(iso).slice(0,10); }
+function findCloture(date, lieu){
+  return state.clotures.find(c => c.date === date && c.lieu_vente === lieu) || null;
+}
+function setCaisseDate(d){ state.caisseDate = d; prefillCaisseForm(); render(); }
+function setCaisseLieu(l){ state.caisseLieu = l; prefillCaisseForm(); render(); }
+function prefillCaisseForm(){
+  const c = findCloture(state.caisseDate, state.caisseLieu);
+  state.caisseFondCaisse = c ? String(c.fond_caisse) : '';
+  state.caisseComptageReel = c && c.comptage_reel != null ? String(c.comptage_reel) : '';
+  state.caisseNote = c ? (c.note || '') : '';
+}
+function updateCaisseField(field, value){ state[field] = value; renderPreservingFocus(); }
+function ventesForCaisse(){
+  return state.ventes.filter(v => v.lieu_vente === state.caisseLieu && dateOnly(v.date) === state.caisseDate);
+}
+function ventesForDateAllLieux(){
+  return state.ventes.filter(v => dateOnly(v.date) === state.caisseDate);
+}
+function reglementTotalsFor(rows){
+  const totals = {};
+  MODES_REGLEMENT.forEach(m => totals[m] = 0);
+  rows.forEach(v => (v.reglements||[]).forEach(r => { totals[r.mode] = (totals[r.mode] || 0) + Number(r.montant); }));
+  return totals;
+}
+async function saveCloture(){
+  const fond = parseFloat(state.caisseFondCaisse) || 0;
+  const comptage = state.caisseComptageReel === '' ? null : (parseFloat(state.caisseComptageReel) || 0);
+  state.saving = true; render();
+  try{
+    const { error } = await withRetry(() => sb.from('cloture_caisse').upsert({
+      date: state.caisseDate, lieu_vente: state.caisseLieu, fond_caisse: fond, comptage_reel: comptage, note: state.caisseNote || null,
+    }, { onConflict: 'date,lieu_vente' }));
+    if (error) throw error;
+    await loadAll();
+    showToast('Clôture de caisse enregistrée pour le ' + new Date(state.caisseDate).toLocaleDateString('fr-FR') + ' · ' + state.caisseLieu, 'success');
+  } catch(err){
+    console.error(err);
+    showToast("Erreur lors de l'enregistrement de la clôture : " + err.message, 'error');
+  }
+  state.saving = false;
+  render();
+}
+
+// ---------- Excel export ----------
+function setExportRange(kind){
+  const now = new Date();
+  let from, to;
+  if (kind === 'semaine'){
+    const day = (now.getDay() + 6) % 7;
+    from = new Date(now); from.setDate(now.getDate() - day);
+    to = new Date(now);
+  } else if (kind === 'mois'){
+    from = new Date(now.getFullYear(), now.getMonth(), 1);
+    to = new Date(now);
+  } else { from = null; to = null; }
+  state.exportFrom = from ? from.toISOString().slice(0,10) : '';
+  state.exportTo = to ? to.toISOString().slice(0,10) : '';
+  render();
+}
+function setExportLieu(l){ state.exportLieu = l; render(); }
+function updateExportField(field, value){ state[field] = value; renderPreservingFocus(); }
+function ventesForExport(){
+  return state.ventes.filter(v => {
+    const d = dateOnly(v.date);
+    if (state.exportFrom && d < state.exportFrom) return false;
+    if (state.exportTo && d > state.exportTo) return false;
+    if (state.exportLieu !== 'Tous' && v.lieu_vente !== state.exportLieu) return false;
+    return true;
+  });
+}
+function downloadVentesAsExcel(rows, filenameLabel){
+  if (rows.length === 0){ showToast('Aucune vente à exporter pour cette sélection.', 'error'); return; }
+  const data = rows.map(v => {
+    const d = new Date(v.date);
+    const reglementsStr = (v.reglements||[]).map(r => `${r.mode}: ${Number(r.montant).toFixed(2)}€`).join(' + ');
+    const articlesStr = (v.items||[]).map(it => `${it.qty}x ${it.nom}${it.couleur?' ('+it.couleur+')':''}${it.taille?' - '+it.taille:''}`).join(', ');
+    return {
+      'Date': d.toLocaleDateString('fr-FR'), 'Heure': d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}),
+      'Lieu de vente': v.lieu_vente || '', 'Articles': articlesStr,
+      'Nb articles': (v.items||[]).reduce((s,it)=>s+it.qty,0), 'Total (€)': Number(v.total), 'Règlements': reglementsStr,
+    };
+  });
+  const totalGeneral = rows.reduce((s,v)=>s+Number(v.total),0);
+  data.push({ 'Date':'', 'Heure':'', 'Lieu de vente':'', 'Articles':'', 'Nb articles':'', 'Total (€)': totalGeneral, 'Règlements': 'TOTAL' });
+  const ws = XLSX.utils.json_to_sheet(data);
+  ws['!cols'] = [{wch:11},{wch:7},{wch:16},{wch:45},{wch:10},{wch:11},{wch:28}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Ventes');
+  XLSX.writeFile(wb, `ventes-bebeach-${filenameLabel}.xlsx`);
+}
+function exportVentesExcel(){
+  const label = (state.exportFrom || state.exportTo) ? `${state.exportFrom||'debut'}_au_${state.exportTo||'aujourdhui'}` : 'toutes';
+  downloadVentesAsExcel(ventesForExport(), label);
+}
+function exportVentesDuJourCaisse(){
+  downloadVentesAsExcel(ventesForCaisse(), `${state.caisseDate}_${state.caisseLieu}`.replace(/\s+/g,'-'));
+}
+
+// ---------- Render helpers ----------
+function PhotoSafe(photo, alt, size, radius){
+  radius = radius || 12;
+  const style = `width:${size}px;height:${size}px;border-radius:${radius}px;`;
+  if (!photo) return `<div class="thumb thumb-fallback" style="${style}">${ICONS.imageOff}</div>`;
+  return `<img class="thumb" src="${escapeHtml(photo)}" alt="${escapeHtml(alt)}" style="${style}" />`;
+}
+document.addEventListener('error', function(e){
+  const img = e.target;
+  if (img && img.tagName === 'IMG' && img.classList && img.classList.contains('thumb')){
+    const div = document.createElement('div');
+    div.className = 'thumb thumb-fallback';
+    div.style.cssText = img.style.cssText;
+    div.innerHTML = ICONS.imageOff;
+    img.replaceWith(div);
+  }
+}, true);
+
+function Pill(label, active, onclick){
+  return `<button class="pill ${active ? 'active' : ''}" onclick="${onclick}">${escapeHtml(label)}</button>`;
+}
+function SearchBox(id, value, oninput, placeholder){
+  return `<div class="search-wrap">
+    ${ICONS.search}
+    <input id="${id}" class="input" style="padding-left:32px;" placeholder="${escapeHtml(placeholder)}" value="${escapeHtml(value)}" oninput="${oninput}(event)" />
+  </div>`;
+}
+function CollectionPills(){
+  return `<div class="pills">
+    ${Pill('Toutes', state.collectionFilter==='Toutes', "setCollectionFilter('Toutes')")}
+    ${COLLECTIONS.map(c => Pill(c, state.collectionFilter===c, `setCollectionFilter('${c.replace(/'/g,"\\'")}')`)).join('')}
+  </div>`;
+}
+function priceDisplay(color){
+  const finalPrice = prixRemise(color);
+  if (color.remise > 0){
+    return `<span style="text-decoration:line-through;color:var(--ink-soft);font-size:11.5px;margin-right:4px;">${euros(color.prix)}</span><span class="price">${euros(finalPrice)}</span><span class="discount-badge">-${color.remise}%</span>`;
+  }
+  return `<span class="price">${euros(finalPrice)}</span>`;
+}
+
+// ---------- Views ----------
+// ---------- Auth ----------
+function setAuthMode(m){ state.authMode = m; state.authError = null; render(); }
+function togglePasswordVisibility(){
+  const input = document.getElementById('auth-password-input');
+  const iconEl = document.getElementById('password-eye-icon');
+  if (!input || !iconEl) return;
+  const showing = input.type === 'text';
+  input.type = showing ? 'password' : 'text';
+  iconEl.innerHTML = showing ? ICONS.eye : ICONS.eyeOff;
+}
+async function handleAuthSubmit(e){
+  e.preventDefault();
+  const f = e.target;
+  const email = f.email.value.trim();
+  const password = f.password.value;
+  state.authSaving = true; state.authError = null; render();
+  try{
+    if (state.authMode === 'signup'){
+      const { error } = await sb.auth.signUp({ email, password });
+      if (error) throw error;
+      state.authError = null;
+      showToast("Compte créé ! Vérifie si une confirmation par email est nécessaire, sinon tu es déjà connectée.", 'success');
+    } else {
+      const { error } = await sb.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+    }
+  } catch(err){
+    state.authError = err.message === 'Invalid login credentials' ? 'Email ou mot de passe incorrect.' : err.message;
+  }
+  state.authSaving = false;
+  render();
+}
+async function handleLogout(){
+  await sb.auth.signOut();
+}
+function renderAuthScreen(){
+  const isSignup = state.authMode === 'signup';
+  return `
+  <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;">
+    <div class="modal" style="max-width:380px;box-shadow:0 12px 40px rgba(59,54,44,0.15);">
+      <div style="display:flex;justify-content:center;margin-bottom:18px;">
+        <div class="logo-badge" style="height:70px;"><img src="logo-bebeach.png" alt="Be Beach" /></div>
+      </div>
+      <div class="serif" style="font-size:19px;font-weight:600;text-align:center;margin-bottom:4px;">${isSignup ? 'Créer un compte' : 'Connexion'}</div>
+      <div class="muted" style="text-align:center;font-size:12.5px;margin-bottom:18px;">Gestion boutique Be Beach</div>
+      <form onsubmit="handleAuthSubmit(event)">
+        <label class="field">Email
+          <input class="input" name="email" type="email" required autocomplete="username" />
+        </label>
+        <label class="field">Mot de passe
+          <div style="position:relative;">
+            <input id="auth-password-input" class="input" name="password" type="password" required minlength="6" autocomplete="${isSignup ? 'new-password' : 'current-password'}" style="padding-right:40px;" />
+            <button type="button" onclick="togglePasswordVisibility()" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--ink-soft);display:flex;padding:4px;">
+              <span id="password-eye-icon">${ICONS.eye}</span>
+            </button>
+          </div>
+        </label>
+        ${state.authError ? `<div style="color:var(--coral-deep);font-size:12.5px;margin-bottom:10px;">${escapeHtml(state.authError)}</div>` : ''}
+        <button type="submit" class="btn btn-coral" style="width:100%;margin-top:4px;" ${state.authSaving?'disabled':''}>${state.authSaving ? '...' : (isSignup ? 'Créer le compte' : 'Se connecter')}</button>
+      </form>
+      <div style="text-align:center;margin-top:14px;font-size:12.5px;">
+        ${isSignup
+          ? `Déjà un compte ? <a href="#" onclick="event.preventDefault();setAuthMode('login')" style="color:var(--sky-deep);">Se connecter</a>`
+          : `Nouveau ici ? <a href="#" onclick="event.preventDefault();setAuthMode('signup')" style="color:var(--sky-deep);">Créer un compte</a>`}
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderHeader(){
+  const NAV = [
+    { id:'dashboard', label:'Tableau de bord', icon: ICONS.home },
+    { id:'stock', label:'Stock', icon: ICONS.package },
+    { id:'vente', label:'Vente', icon: ICONS.bag },
+    { id:'caisse', label:'Caisse', icon: ICONS.cash },
+    { id:'clients', label:'Clients', icon: ICONS.user },
+    { id:'historique', label:'Historique', icon: ICONS.history },
+  ];
+  return `
+  <div class="header ${headerHidden ? 'header-hidden' : ''}">
+    <div class="header-row">
+      <div class="logo">
+        <div class="logo-badge"><img src="logo-bebeach.png" alt="Be Beach - La Petite Californie" /></div>
+        <div class="logo-sub">Gestion boutique</div>
+      </div>
+      <div class="nav">
+        ${NAV.map(n => `<button class="nav-btn ${state.tab===n.id?'active':''}" onclick="setTab('${n.id}')">${n.icon}${n.label}</button>`).join('')}
+        <button class="nav-btn" onclick="handleLogout()" title="Se déconnecter">${ICONS.x} Déconnexion</button>
+      </div>
+    </div>
+    <svg class="wave" viewBox="0 0 1440 60" preserveAspectRatio="none"><path d="M0,30 C240,60 480,0 720,20 C960,40 1200,10 1440,30 L1440,60 L0,60 Z" fill="var(--bg)"/></svg>
+  </div>`;
+}
+
+function renderDashboard(){
+  const merchandiseArticles = state.articles.filter(a => a.collection !== 'Carte cadeau');
+  const stockValue = merchandiseArticles.reduce((s,a) => s + stockValueOf(a), 0);
+  const stockCostValue = merchandiseArticles.reduce((s,a) => s + stockCostValueOf(a), 0);
+  const margePotentielle = stockValue - stockCostValue;
+  const totalCA = state.ventes.reduce((s,v) => s + Number(v.total), 0);
+  const lowStockEntries = [];
+  merchandiseArticles.forEach(a => lowEntries(a).forEach(({color,variant}) => lowStockEntries.push({ article:a, color, variant })));
+  const today = new Date().toDateString();
+  const ventesAuj = state.ventes.filter(v => new Date(v.date).toDateString() === today);
+  const totalStockCount = merchandiseArticles.reduce((s,a) => s + totalStock(a), 0);
+
+  return `
+  <div style="margin-top:8px;">
+    <div class="stat-row">
+      <div class="stat-card">
+        <div class="stat-label">Chiffre d'affaires</div>
+        <div class="stat-value" style="color:var(--coral-deep);">${euros(totalCA)}</div>
+        <div class="stat-sub">${state.ventes.length} vente${state.ventes.length>1?'s':''} enregistrée${state.ventes.length>1?'s':''}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Ventes aujourd'hui</div>
+        <div class="stat-value" style="color:var(--sky-deep);">${ventesAuj.length}</div>
+        <div class="stat-sub">${euros(ventesAuj.reduce((s,v)=>s+Number(v.total),0))}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Valeur du stock</div>
+        <div class="stat-value">${euros(stockValue)}</div>
+        <div class="stat-sub">${totalStockCount} pièces en boutique</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Alertes stock bas</div>
+        <div class="stat-value" style="color:${lowStockEntries.length?'var(--coral-deep)':'var(--sage)'};">${lowStockEntries.length}</div>
+        <div class="stat-sub">${lowStockEntries.length ? 'à réapprovisionner' : 'tout va bien'}</div>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Valorisation du stock</div>
+    <div class="stat-row">
+      <div class="stat-card" style="background:var(--sand);">
+        <div class="stat-label">Valeur stock (prix de vente)</div>
+        <div class="stat-value" style="font-size:20px;">${euros(stockValue)}</div>
+      </div>
+      <div class="stat-card" style="background:var(--sand);">
+        <div class="stat-label">Valeur stock (prix d'achat)</div>
+        <div class="stat-value" style="font-size:20px;">${euros(stockCostValue)}</div>
+      </div>
+      <div class="stat-card" style="background:var(--sand);">
+        <div class="stat-label">Marge potentielle</div>
+        <div class="stat-value" style="font-size:20px;color:${margePotentielle>=0?'var(--sage)':'var(--coral-deep)'};">${euros(margePotentielle)}</div>
+        <div class="stat-sub">si tout le stock était vendu</div>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="panel">
+        <div class="panel-title">Dernières ventes</div>
+        ${state.ventes.length===0 ? '<div class="muted">Aucune vente pour le moment.</div>' : state.ventes.slice(0,5).map(v => `
+          <div class="sale-row">
+            <span class="muted">${new Date(v.date).toLocaleString('fr-FR',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})} · ${v.items.reduce((s,i)=>s+i.qty,0)} art.</span>
+            <span style="font-weight:600;">${euros(v.total)}</span>
+          </div>`).join('')}
+      </div>
+      <div class="panel">
+        <div class="panel-title">${ICONS.alert} Stock bas</div>
+        ${lowStockEntries.length===0 ? '<div class="muted">Aucune alerte, tout est bien approvisionné.</div>' : lowStockEntries.map(({article,color,variant}) => `
+          <div class="lowstock-row">
+            ${PhotoSafe(color.photo, article.nom, 34, 8)}
+            <div style="flex:1;">${escapeHtml(article.nom)} <span class="muted">· ${escapeHtml(color.couleur)} · ${escapeHtml(variant.taille)}</span></div>
+            <span style="color:var(--coral-deep);font-weight:700;">${variant.stock} restant${variant.stock>1?'s':''}</span>
+          </div>`).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderStock(){
+  const cards = filteredCards(state.stocksearch);
+  return `
+  <div style="margin-top:8px;">
+    <div class="toolbar">
+      ${SearchBox('stock-search-input', state.stocksearch, 'onStockSearchInput', 'Rechercher par nom, code ou couleur...')}
+      <div style="display:flex;gap:6px;">
+        <input id="stock-scan-input" class="input" style="max-width:220px;" placeholder="Scanner pour éditer..." onkeydown="onStockScanInputKeydown(event)" />
+        <button type="button" class="btn btn-outline" style="padding:0 12px;" onclick="openScanner('stock')" title="Scanner avec la caméra">${ICONS.camera}</button>
+      </div>
+      <button class="btn btn-coral" onclick="openAddForm()" style="display:flex;align-items:center;gap:6px;">${ICONS.plus} Ajouter un article</button>
+    </div>
+    ${CollectionPills()}
+    <div class="stock-grid">
+      ${cards.map(({article:a, color:c}) => `
+        <div class="stock-card">
+          <div class="stock-top">
+            ${PhotoSafe(c.photo, a.nom, 64, 12)}
+            <div style="flex:1;min-width:0;">
+              <div class="stock-name">${escapeHtml(a.nom)}</div>
+              <div class="stock-meta">${escapeHtml(c.couleur||'')}</div>
+              ${priceDisplay(c)}
+            </div>
+            <div style="flex-shrink:0;text-align:center;">
+              <img src="${qrUrl(c.code, 64)}" width="64" height="64" alt="QR ${escapeHtml(c.code)}" style="border-radius:6px;" />
+              <div class="stock-code" style="margin-top:3px;">${escapeHtml(c.code)}</div>
+            </div>
+          </div>
+          <div class="variant-grid">
+            ${c.variants.map(v => `
+              <div class="variant-cell">
+                <div class="variant-cell-size">${escapeHtml(v.taille)}</div>
+                <div class="variant-cell-stock" style="color:${v.stock<=a.seuil?'var(--coral-deep)':'var(--sage)'};">${v.stock}</div>
+              </div>`).join('')}
+          </div>
+          <div class="stock-actions">
+            <button class="btn btn-outline btn-sm" onclick="openEditForm('${a.id}')">Modifier</button>
+            ${state.confirmDelete===c.id
+              ? `<button class="btn btn-sm" style="background:var(--coral-deep);color:#fff;" onclick="deleteColor('${c.id}','${a.id}')">Confirmer ?</button>
+                 <button class="btn btn-outline btn-sm" onclick="cancelDelete()">Annuler</button>`
+              : `<button class="btn btn-outline btn-sm" style="color:var(--coral-deep);padding:5px 8px;" onclick="askDelete('${c.id}')">${ICONS.trash}</button>`}
+          </div>
+        </div>`).join('')}
+    </div>
+    ${cards.length===0 ? '<div class="muted" style="margin-top:20px;">Aucun article ne correspond.</div>' : ''}
+  </div>`;
+}
+function onStockSearchInput(e){ state.stocksearch = e.target.value; renderPreservingFocus(); }
+
+function renderReglementsEditor(){
+  const remaining = reglementsRemaining();
+  const lastIdx = state.reglements.length - 1;
+  return `
+  <div class="field" style="margin-bottom:10px;">Mode(s) de règlement
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      ${state.reglements.map((r, idx) => `
+        <div style="border:1px solid var(--line);border-radius:12px;padding:8px;background:#fff;">
+          <div style="display:flex;gap:6px;margin-bottom:${state.reglements.length>1?'6px':'6px'};">
+            ${MODES_REGLEMENT.map(m => `<button type="button" class="pill" style="flex:1;text-align:center;${r.mode===m?'background:var(--sky);border-color:var(--sky-deep);color:#fff;':''}" onclick="setReglementMode(${idx}, '${m}')">${m}</button>`).join('')}
+            ${state.reglements.length > 1 ? `<button type="button" class="mini-btn" style="color:var(--coral-deep);flex-shrink:0;" onclick="removeReglementLine(${idx})">${ICONS.x}</button>` : ''}
+          </div>
+          ${idx < lastIdx
+            ? `<input id="reg-montant-${idx}" class="input" type="text" inputmode="decimal" value="${r.montant}" oninput="updateReglementMontant(${idx}, this.value)" />`
+            : `<div style="font-weight:600;text-align:right;padding-right:2px;">${euros(r.montant)}${lastIdx>0?' <span class="muted" style="font-weight:400;font-size:11px;">(reste)</span>':''}</div>`}
+        </div>`).join('')}
+    </div>
+    <button type="button" class="add-size-btn" style="margin-top:6px;align-self:flex-start;" onclick="addReglementLine()">+ Ajouter un règlement (paiement partagé)</button>
+    ${remaining < -0.004 ? `<div style="font-size:12px;margin-top:4px;color:var(--coral-deep);font-weight:600;">Trop réparti de ${euros(-remaining)}, ajuste un montant</div>` : ''}
+  </div>`;
+}
+
+function renderLieuPicker(){
+  return `
+  <div class="field" style="margin-bottom:14px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <span>Lieu de vente</span>
+      <a href="#" onclick="event.preventDefault();toggleLieuManager()" style="font-size:11px;color:var(--sky-deep);">${state.showLieuManager ? 'Fermer' : 'Gérer les lieux'}</a>
+    </div>
+    <select class="input" onchange="setLieuVente(this.value)">
+      ${state.lieux.map(l => `<option value="${escapeHtml(l.nom)}" ${state.lieuVente===l.nom?'selected':''}>${escapeHtml(l.nom)}</option>`).join('')}
+    </select>
+    ${state.showLieuManager ? `
+      <div style="margin-top:8px;padding:10px;border:1px dashed var(--line);border-radius:10px;">
+        <div style="display:flex;gap:6px;">
+          <input id="new-lieu-input" class="input" placeholder="Nouveau lieu (ex : Marché de Pornichet)" value="${escapeHtml(state.newLieuName)}" oninput="updateNewLieuName(this.value)" />
+          <button type="button" class="add-size-btn" onclick="addLieuVente()">+ Créer</button>
+        </div>
+        ${state.lieux.length ? `<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:8px;">${state.lieux.map(l => `<span style="font-size:11px;color:var(--ink-soft);">${escapeHtml(l.nom)} <a href="#" onclick="event.preventDefault();deleteLieuVente('${l.id}','${escapeHtml(l.nom).replace(/'/g,"\\'")}')" style="color:var(--coral-deep);">supprimer</a></span>`).join('')}</div>` : ''}
+      </div>` : ''}
+  </div>`;
+}
+
+function renderScanSizePicker(){
+  if (!state.scanPendingColor) return '';
+  const found = findColorById(state.scanPendingColor);
+  if (!found) return '';
+  const { article, color } = found;
+  return `
+  <div style="border:2px solid var(--sky);border-radius:14px;padding:12px;margin-bottom:14px;background:#fff;">
+    <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px;">
+      ${PhotoSafe(color.photo, article.nom, 44, 10)}
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:600;font-size:13.5px;">${escapeHtml(article.nom)} <span class="muted">· ${escapeHtml(color.couleur)}</span></div>
+        <div class="muted" style="font-size:12px;">Choisis la taille à ajouter</div>
+      </div>
+      <button type="button" class="mini-btn" onclick="cancelScanPending()">${ICONS.x}</button>
+    </div>
+    <div class="size-chips">
+      ${color.variants.map(v => `<button class="size-chip" ${v.stock===0?'disabled':''} onclick="pickScanSize('${color.id}','${v.taille.replace(/'/g,"\\'")}')">${escapeHtml(v.taille)}</button>`).join('')}
+    </div>
+  </div>`;
+}
+
+function renderVente(){
+  const cards = filteredCards(state.ventesearch);
+  const detail = panierDetail();
+  const total = panierTotal();
+  const remaining = reglementsRemaining();
+  const canEncaisser = detail.length > 0 && Math.abs(remaining) < 0.004 && !state.saving && state.reglementModeTouched;
+  return `
+  <div class="vente-layout" style="margin-top:8px;">
+    <div>
+      <div class="toolbar" style="margin-bottom:0;">
+        ${SearchBox('vente-search-input', state.ventesearch, 'onVenteSearchInput', 'Rechercher par nom ou code...')}
+      </div>
+      ${CollectionPills()}
+      <div class="vente-grid">
+        ${cards.map(({article:a, color:c}) => `
+          <div class="vente-tile">
+            ${PhotoSafe(c.photo, a.nom, 130, 10)}
+            <div class="vente-tile-name">${escapeHtml(a.nom)}</div>
+            <div class="vente-tile-meta">${escapeHtml(c.couleur||'')}</div>
+            <div style="font-size:13px;">${priceDisplay(c)}</div>
+            <div class="size-chips">
+              ${c.variants.map(v => `<button class="size-chip" ${v.stock===0?'disabled':''} onclick="addToPanier('${c.id}','${v.taille.replace(/'/g,"\\'")}')">${escapeHtml(v.taille)}</button>`).join('')}
+            </div>
+          </div>`).join('')}
+      </div>
+      ${cards.length===0 ? '<div class="muted" style="margin-top:20px;">Aucun article ne correspond.</div>' : ''}
+    </div>
+
+    <div class="panel cart" id="cart-panel">
+      <div class="panel-title">${ICONS.bag} Panier</div>
+      ${state.saleConfirmation ? `
+        <div class="sale-confirm">
+          ${ICONS.check}
+          <div class="sale-confirm-title">${escapeHtml(state.saleConfirmation.message)}</div>
+          <div class="sale-confirm-detail">${escapeHtml(state.saleConfirmation.detail)}</div>
+        </div>
+      ` : `
+        <div class="field" style="margin-bottom:14px;">Scanner un article
+          <div style="display:flex;gap:6px;">
+            <input id="scan-code-input" class="input" placeholder="Scanner (douchette) ou saisir un code, puis Entrée" onkeydown="onScanInputKeydown(event)" />
+            <button type="button" class="btn btn-outline" style="padding:0 14px;flex-shrink:0;" onclick="openScanner('cart')" title="Scanner avec la caméra">${ICONS.camera}</button>
+          </div>
+        </div>
+        ${renderScanSizePicker()}
+        ${renderLieuPicker()}
+        ${renderClientPicker()}
+        ${detail.length===0 ? '<div class="muted">Clique sur une taille pour ajouter un article à la vente.</div>' : ''}
+        <div style="margin-bottom:14px;">
+          ${detail.map(p => `
+            <div class="cart-row">
+              ${PhotoSafe(p.color.photo, p.article.nom, 38, 9)}
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(p.article.nom)} <span class="muted">· ${escapeHtml(p.color.couleur)}</span></div>
+                <div style="font-size:11.5px;color:var(--sky-deep);font-weight:600;">Taille ${escapeHtml(p.taille)}</div>
+                <div style="font-size:11.5px;color:var(--ink-soft);">${euros(prixRemise(p.color))}</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:4px;">
+                <button class="qty-btn" onclick="changeQty('${p.colorId}','${p.taille.replace(/'/g,"\\'")}',-1)">${ICONS.minus}</button>
+                <span style="font-size:13px;font-weight:600;width:16px;text-align:center;display:inline-block;">${p.qty}</span>
+                <button class="qty-btn" onclick="changeQty('${p.colorId}','${p.taille.replace(/'/g,"\\'")}',1)">${ICONS.plus}</button>
+              </div>
+            </div>`).join('')}
+        </div>
+        ${renderReglementsEditor()}
+        <div class="cart-total">
+          <span style="font-size:14px;color:var(--ink-soft);">Total</span>
+          <span class="cart-total-value">${euros(total)}</span>
+        </div>
+        ${(detail.length > 0 && !state.reglementModeTouched) ? `<div style="font-size:12px;color:var(--coral-deep);font-weight:600;margin-bottom:8px;text-align:center;">Confirme le mode de paiement ci-dessus (touche un bouton) pour activer l'encaissement</div>` : ''}
+        <button class="btn btn-sage" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;" ${canEncaisser?'':'disabled'} onclick="encaisser()">
+          ${state.saving ? 'Enregistrement…' : "Encaisser la vente"}
+        </button>
+      `}
+    </div>
+  </div>`;
+}
+
+function renderHistorique(){
+  if (state.ventes.length===0) return '<div class="muted" style="margin-top:8px;">Aucune vente enregistrée pour le moment.</div>';
+  return `
+  <div style="margin-top:8px;">
+    ${state.ventes.map(v => `
+      <details>
+        <summary>
+          <span class="muted">${new Date(v.date).toLocaleString('fr-FR',{dateStyle:'medium',timeStyle:'short'})} · ${escapeHtml(v.lieu_vente||'Magasin')} · ${(v.reglements||[]).map(r=>escapeHtml(r.mode)+' '+euros(r.montant)).join(' + ')}</span>
+          <span style="font-weight:700;">${euros(v.total)}</span>
+        </summary>
+        <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--line);">
+          ${v.client_id ? (() => { const cl = findClientById(v.client_id); return cl ? `<div style="font-size:12.5px;margin-bottom:8px;">${ICONS.user} <b>${escapeHtml(clientLabel(cl))}</b></div>` : ''; })() : ''}
+          ${v.items.map(it => `
+            <div class="vente-detail-row">
+              <span>${it.qty} × ${escapeHtml(it.nom)}${it.couleur ? ' <span class="muted">('+escapeHtml(it.couleur)+')</span>' : ''}${it.taille ? ' <span class="muted">· '+escapeHtml(it.taille)+'</span>' : ''}</span>
+              <span class="muted">${euros(it.prixUnitaire * it.qty)}</span>
+            </div>`).join('')}
+        </div>
+      </details>`).join('')}
+  </div>`;
+}
+
+function renderCaisse(){
+  const ventesJour = ventesForCaisse();
+  const totals = reglementTotalsFor(ventesJour);
+  const totalCA = ventesJour.reduce((s,v) => s + Number(v.total), 0);
+  const fond = parseFloat(state.caisseFondCaisse) || 0;
+  const especes = totals['Espèces'] || 0;
+  const attendu = fond + especes;
+  const comptage = state.caisseComptageReel === '' ? null : parseFloat(state.caisseComptageReel);
+  const ecart = comptage == null ? null : +(comptage - attendu).toFixed(2);
+
+  const ventesTousLieux = ventesForDateAllLieux();
+  const totalsTous = reglementTotalsFor(ventesTousLieux);
+  const totalCATous = ventesTousLieux.reduce((s,v) => s + Number(v.total), 0);
+
+  const cloturesJour = state.clotures.filter(c => c.date === state.caisseDate);
+  const fondTousLieux = cloturesJour.reduce((s,c) => s + Number(c.fond_caisse||0), 0);
+  const especesTous = totalsTous['Espèces'] || 0;
+  const attenduTous = fondTousLieux + especesTous;
+  const lieuxAvecVentes = [...new Set(ventesTousLieux.map(v => v.lieu_vente))];
+  const lieuxComptes = cloturesJour.filter(c => c.comptage_reel != null);
+  const comptageTousSum = lieuxComptes.reduce((s,c) => s + Number(c.comptage_reel), 0);
+  const ecartTous = (lieuxAvecVentes.length > 0 && lieuxComptes.length >= lieuxAvecVentes.length)
+    ? +(comptageTousSum - attenduTous).toFixed(2) : null;
+
+  return `
+  <div style="margin-top:8px;">
+    <div class="toolbar">
+      <label class="field" style="max-width:200px;">Date
+        <input class="input" type="date" value="${state.caisseDate}" onchange="setCaisseDate(this.value)" />
+      </label>
+      <div class="pills" style="padding-bottom:0;">
+        ${state.lieux.map(l => Pill(l.nom, state.caisseLieu===l.nom, `setCaisseLieu('${l.nom.replace(/'/g,"\\'")}')`)).join('')}
+      </div>
+    </div>
+
+    <div style="font-size:11px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Tous les lieux confondus — ${new Date(state.caisseDate).toLocaleDateString('fr-FR')}</div>
+    <div class="stat-row">
+      <div class="stat-card" style="background:var(--sand);">
+        <div class="stat-label">Ventes du jour</div>
+        <div class="stat-value">${ventesTousLieux.length}</div>
+        <div class="stat-sub">Tous lieux</div>
+      </div>
+      <div class="stat-card" style="background:var(--sand);">
+        <div class="stat-label">Chiffre d'affaires</div>
+        <div class="stat-value" style="color:var(--coral-deep);">${euros(totalCATous)}</div>
+      </div>
+      ${MODES_REGLEMENT.map(m => `
+        <div class="stat-card" style="background:var(--sand);">
+          <div class="stat-label">${escapeHtml(m)}</div>
+          <div class="stat-value" style="color:var(--sky-deep);font-size:22px;">${euros(totalsTous[m]||0)}</div>
+        </div>`).join('')}
+    </div>
+
+    <div style="font-size:11px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.5px;margin:14px 0 6px;">${escapeHtml(state.caisseLieu)}</div>
+    <div class="stat-row">
+      <div class="stat-card">
+        <div class="stat-label">Ventes du jour</div>
+        <div class="stat-value">${ventesJour.length}</div>
+        <div class="stat-sub">${state.caisseLieu}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Chiffre d'affaires</div>
+        <div class="stat-value" style="color:var(--coral-deep);">${euros(totalCA)}</div>
+      </div>
+      ${MODES_REGLEMENT.map(m => `
+        <div class="stat-card">
+          <div class="stat-label">${escapeHtml(m)}</div>
+          <div class="stat-value" style="color:var(--sky-deep);font-size:22px;">${euros(totals[m]||0)}</div>
+        </div>`).join('')}
+    </div>
+
+    <div class="panel" style="margin-bottom:18px;">
+      <div class="panel-title">${ICONS.cash} Contrôle de caisse — tous lieux confondus</div>
+      <div class="sale-row" style="border-bottom:none;">
+        <span class="muted">Fond de caisse total (somme des lieux clôturés)</span>
+        <span style="font-weight:600;">${euros(fondTousLieux)}</span>
+      </div>
+      <div class="sale-row" style="border-bottom:none;">
+        <span class="muted">Espèces vendues (tous lieux)</span>
+        <span style="font-weight:600;">${euros(especesTous)}</span>
+      </div>
+      <div class="sale-row" style="border-bottom:none;">
+        <span class="muted">Attendu en caisse (fond + espèces)</span>
+        <span style="font-weight:600;">${euros(attenduTous)}</span>
+      </div>
+      <div class="sale-row" style="border-bottom:none;">
+        <span class="muted">Comptage réel total saisi ${lieuxComptes.length < lieuxAvecVentes.length ? `(${lieuxComptes.length}/${lieuxAvecVentes.length} lieux comptés)` : ''}</span>
+        <span style="font-weight:600;">${euros(comptageTousSum)}</span>
+      </div>
+      <div class="sale-row" style="border-bottom:1px solid var(--line);padding-bottom:10px;">
+        <span class="muted">Écart total</span>
+        <span style="font-weight:700;color:${ecartTous==null?'var(--ink-soft)':(Math.abs(ecartTous)<0.01?'var(--sage)':'var(--coral-deep)')};">${ecartTous==null ? '— (tous les lieux ne sont pas encore comptés)' : (ecartTous>0?'+':'')+euros(ecartTous)}</span>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div class="panel">
+        <div class="panel-title">${ICONS.cash} Contrôle de caisse (espèces) — ${escapeHtml(state.caisseLieu)}</div>
+        <div class="field-row">
+          <label class="field" style="flex:1;">Fond de caisse (début)
+            <input id="caisse-fond" class="input" type="text" inputmode="decimal" value="${escapeHtml(state.caisseFondCaisse)}" oninput="updateCaisseField('caisseFondCaisse', this.value)" />
+          </label>
+          <label class="field" style="flex:1;">Comptage réel (fin de journée)
+            <input id="caisse-comptage" class="input" type="text" inputmode="decimal" value="${escapeHtml(state.caisseComptageReel)}" oninput="updateCaisseField('caisseComptageReel', this.value)" />
+          </label>
+        </div>
+        <div class="sale-row" style="border-bottom:none;">
+          <span class="muted">Espèces vendues aujourd'hui</span>
+          <span style="font-weight:600;">${euros(especes)}</span>
+        </div>
+        <div class="sale-row" style="border-bottom:none;">
+          <span class="muted">Attendu en caisse (fond + espèces)</span>
+          <span style="font-weight:600;">${euros(attendu)}</span>
+        </div>
+        <div class="sale-row" style="border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:12px;">
+          <span class="muted">Écart</span>
+          <span style="font-weight:700;color:${ecart==null?'var(--ink-soft)':(Math.abs(ecart)<0.01?'var(--sage)':'var(--coral-deep)')};">${ecart==null ? '—' : (ecart>0?'+':'')+euros(ecart)}</span>
+        </div>
+        <label class="field">Note (facultatif)
+          <input id="caisse-note" class="input" value="${escapeHtml(state.caisseNote)}" oninput="updateCaisseField('caisseNote', this.value)" placeholder="Ex : billet déchiré retiré, etc." />
+        </label>
+        <button class="btn btn-coral" style="width:100%;margin-top:8px;" ${state.saving?'disabled':''} onclick="saveCloture()">${state.saving?'Enregistrement…':'Enregistrer la clôture du jour'}</button>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title" style="justify-content:space-between;">
+          <span>Ventes — ${new Date(state.caisseDate).toLocaleDateString('fr-FR')} · ${escapeHtml(state.caisseLieu)}</span>
+          <button type="button" class="btn btn-outline btn-sm" onclick="exportVentesDuJourCaisse()">Exporter ce jour (Excel)</button>
+        </div>
+        ${ventesJour.length===0 ? '<div class="muted">Aucune vente ce jour, sur ce point de vente.</div>' : ventesJour.map(v => `
+          <div class="sale-row">
+            <span class="muted">${new Date(v.date).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})} · ${(v.reglements||[]).map(r=>escapeHtml(r.mode)).join('+')}</span>
+            <span style="font-weight:600;">${euros(v.total)}</span>
+          </div>`).join('')}
+      </div>
+    </div>
+    ${renderExportPanel()}
+  </div>`;
+}
+
+function renderExportPanel(){
+  return `
+  <div class="panel" style="margin-top:18px;">
+    <div class="panel-title">${ICONS.history} Export des ventes (Excel)</div>
+    <div class="toolbar" style="margin-bottom:10px;">
+      <button type="button" class="add-size-btn" onclick="setExportRange('semaine')">Cette semaine</button>
+      <button type="button" class="add-size-btn" onclick="setExportRange('mois')">Ce mois</button>
+      <button type="button" class="add-size-btn" onclick="setExportRange('tout')">Tout</button>
+    </div>
+    <div class="field-row">
+      <label class="field" style="flex:1;">Du
+        <input id="export-from" class="input" type="date" value="${state.exportFrom}" oninput="updateExportField('exportFrom', this.value)" />
+      </label>
+      <label class="field" style="flex:1;">Au
+        <input id="export-to" class="input" type="date" value="${state.exportTo}" oninput="updateExportField('exportTo', this.value)" />
+      </label>
+      <label class="field" style="flex:1;">Lieu de vente
+        <select class="input" onchange="setExportLieu(this.value)">
+          <option value="Tous" ${state.exportLieu==='Tous'?'selected':''}>Tous</option>
+          ${state.lieux.map(l => `<option value="${escapeHtml(l.nom)}" ${state.exportLieu===l.nom?'selected':''}>${escapeHtml(l.nom)}</option>`).join('')}
+        </select>
+      </label>
+    </div>
+    <div class="muted" style="margin-bottom:10px;">${ventesForExport().length} vente(s) correspondent à ces filtres.</div>
+    <button class="btn btn-coral" onclick="exportVentesExcel()">Télécharger le fichier Excel</button>
+  </div>`;
+}
+
+function renderColorBlock(c, index){
+  const finalPrice = prixRemise({ prix: parseFloat(c.prix)||0, remise: parseFloat(c.remise)||0 });
+  return `
+  <div class="color-block">
+    <div class="color-block-header">
+      <div class="color-block-title">Couleur ${index + 1}${c.couleur ? ' — ' + escapeHtml(c.couleur) : ''}</div>
+      ${state.formColors.length > 1 ? `<button type="button" class="mini-btn" style="color:var(--coral-deep);" onclick="removeColorBlock('${c.key}')">${ICONS.x}</button>` : ''}
+    </div>
+    <div class="color-preview-row">
+      ${PhotoSafe(c.photo, c.couleur, 56, 10)}
+      <img src="${qrUrl(c.code || 'BB-0000', 56)}" width="56" height="56" alt="QR" style="border-radius:6px;" />
+      <div style="flex:1;min-width:0;">
+        <div class="field-row" style="margin-bottom:0;">
+          <label class="field" style="flex:1;">Couleur
+            <input id="cf-couleur-${c.key}" class="input" value="${escapeHtml(c.couleur)}" placeholder="Ex : Bleu ciel" oninput="updateColorField('${c.key}','couleur',this.value)" />
+          </label>
+        </div>
+      </div>
+    </div>
+    <div class="field-row">
+      <label class="field" style="flex:1.4;">Code (QR / code-barres)
+        <div style="display:flex;gap:6px;">
+          <input id="cf-code-${c.key}" class="input" value="${escapeHtml(c.code)}" oninput="updateColorField('${c.key}','code',this.value)" />
+          <button type="button" class="add-size-btn" onclick="regenerateColorCode('${c.key}')">Générer</button>
+        </div>
+      </label>
+    </div>
+    <div class="field-row">
+      <label class="field" style="flex:1;">Prix de vente (€)
+        <input id="cf-prix-${c.key}" class="input" type="text" inputmode="decimal" value="${c.prix}" oninput="updateColorField('${c.key}','prix',this.value)" />
+      </label>
+      <label class="field" style="flex:1;">Prix d'achat (€)
+        <input id="cf-prixachat-${c.key}" class="input" type="text" inputmode="decimal" value="${c.prix_achat}" oninput="updateColorField('${c.key}','prix_achat',this.value)" />
+      </label>
+      <label class="field" style="flex:1;">Remise (%)
+        <input id="cf-remise-${c.key}" class="input" type="text" inputmode="decimal" value="${c.remise}" oninput="updateColorField('${c.key}','remise',this.value)" />
+      </label>
+    </div>
+    <div class="field-row">
+      <label class="field" style="flex:1;">Photo (URL)
+        <input id="cf-photo-${c.key}" class="input" value="${escapeHtml(c.photo||'')}" placeholder="https://..." oninput="updateColorField('${c.key}','photo',this.value)" />
+      </label>
+    </div>
+    ${(parseFloat(c.remise)||0) > 0 ? `<div class="price-preview">Prix remisé : <b>${euros(finalPrice)}</b> <span style="text-decoration:line-through;">${euros(parseFloat(c.prix)||0)}</span></div>` : ''}
+    <div class="variant-editor">
+      <div style="font-size:12px;color:var(--ink-soft);margin-bottom:8px;">Tailles &amp; stock (pour cette couleur)</div>
+      ${c.variants.map(v => `
+        <div class="variant-editor-row">
+          <input id="cf-taille-${c.key}-${v.key}" class="input taille-input" placeholder="Taille" value="${escapeHtml(v.taille)}" oninput="updateColorVariantField('${c.key}','${v.key}','taille',this.value)" />
+          <input id="cf-stock-${c.key}-${v.key}" class="input" type="text" inputmode="numeric" placeholder="Stock" value="${v.stock}" oninput="updateColorVariantField('${c.key}','${v.key}','stock',this.value)" />
+          <button type="button" class="mini-btn" style="color:var(--coral-deep);" onclick="removeVariantRowFromColor('${c.key}','${v.key}')">${ICONS.x}</button>
+        </div>`).join('')}
+      <div class="add-size-row">
+        <button type="button" class="add-size-btn" onclick="addVariantRowToColor('${c.key}','')">+ Ajouter une taille</button>
+        <button type="button" class="add-size-btn" onclick="addAllStandardSizesToColor('${c.key}')">+ XS → XXL</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderForm(){
+  if (!state.showForm) return '';
+  const a = state.editing || { nom:'', collection:COLLECTIONS[0], seuil:3 };
+  return `
+  <div class="modal-backdrop" onclick="if(event.target===this) closeForm()">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="serif" style="font-size:19px;font-weight:600;">${state.editing ? "Modifier l'article" : 'Nouvel article'}</div>
+        <button class="modal-close" onclick="closeForm()">${ICONS.x}</button>
+      </div>
+      <form onsubmit="saveArticleForm(event)">
+        <label class="field">Nom de l'article
+          <input class="input" name="nom" required value="${escapeHtml(a.nom)}" placeholder="Ex : T-shirt Vagues" />
+        </label>
+        <div class="field-row">
+          <label class="field" style="flex:2;">Collection
+            <select class="input" name="collection">
+              ${COLLECTIONS.map(col => `<option value="${escapeHtml(col)}" ${a.collection===col?'selected':''}>${escapeHtml(col)}</option>`).join('')}
+            </select>
+          </label>
+          <label class="field" style="flex:1;">Seuil alerte
+            <input class="input" type="number" min="0" name="seuil" value="${a.seuil}" />
+          </label>
+        </div>
+        <div class="hint">Astuce photo : utilise un lien d'image (ex. depuis bebeach.fr) plutôt qu'un fichier importé — ça évite de stocker de grosses images. Chaque couleur a son propre QR code, prix et remise.</div>
+
+        ${state.formColors.map((c, i) => renderColorBlock(c, i)).join('')}
+        <button type="button" class="btn btn-outline" style="width:100%;margin-bottom:14px;" onclick="addColorBlock()">+ Ajouter une couleur</button>
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline" style="flex:1;" onclick="closeForm()">Annuler</button>
+          <button type="submit" class="btn btn-coral" style="flex:1;" ${state.saving?'disabled':''}>${state.saving ? 'Enregistrement…' : 'Enregistrer'}</button>
+        </div>
+      </form>
+    </div>
+  </div>`;
+}
+
+function render(){
+  const root = document.getElementById('app');
+  if (state.authChecking){
+    root.innerHTML = '<div class="loading-screen">Chargement de la boutique…</div>';
+    return;
+  }
+  if (!state.session){
+    root.innerHTML = renderAuthScreen();
+    return;
+  }
+  if (state.loading && state.articles.length===0){
+    root.innerHTML = '<div class="loading-screen">Chargement de la boutique…</div>';
+    return;
+  }
+  let body = '';
+  if (state.error){
+    body = `<div class="container" style="margin-top:24px;"><div class="panel" style="color:var(--coral-deep);">${escapeHtml(state.error)}</div></div>`;
+  } else {
+    let content = '';
+    if (state.tab==='dashboard') content = renderDashboard();
+    else if (state.tab==='stock') content = renderStock();
+    else if (state.tab==='vente') content = renderVente();
+    else if (state.tab==='caisse') content = renderCaisse();
+    else if (state.tab==='clients') content = renderClients();
+    else if (state.tab==='historique') content = renderHistorique();
+    body = `<div class="container">${content}</div>`;
+  }
+  root.innerHTML = renderHeader() + body + renderForm() + renderClientForm() + renderToast() + renderMiniCartBar();
+  adjustHeaderOffset();
+}
+
+let headerHidden = false;
+function adjustHeaderOffset(){
+  const headerEl = document.querySelector('.header');
+  const containerEl = document.querySelector('.container');
+  if (headerEl && containerEl){
+    containerEl.style.paddingTop = headerHidden ? '14px' : (headerEl.offsetHeight + 14) + 'px';
+  }
+}
+window.addEventListener('resize', adjustHeaderOffset);
+
+// Hide the fixed header when scrolling down (frees up vertical space, useful in
+// landscape on phones), and bring it back as soon as the user scrolls up.
+let lastScrollY = 0;
+let scrollTicking = false;
+function onScrollHeaderVisibility(){
+  scrollTicking = false;
+  const headerEl = document.querySelector('.header');
+  const containerEl = document.querySelector('.container');
+  if (!headerEl || !containerEl) return;
+  const currentY = window.scrollY;
+  const goingDown = currentY > lastScrollY + 4;
+  const goingUp = currentY < lastScrollY - 4;
+  if (goingDown && currentY > headerEl.offsetHeight && !headerHidden){
+    headerHidden = true;
+    headerEl.classList.add('header-hidden');
+    containerEl.style.paddingTop = '14px';
+  } else if (goingUp && headerHidden){
+    headerHidden = false;
+    headerEl.classList.remove('header-hidden');
+    containerEl.style.paddingTop = (headerEl.offsetHeight + 14) + 'px';
+  }
+  lastScrollY = currentY;
+}
+window.addEventListener('scroll', () => {
+  if (!scrollTicking){
+    scrollTicking = true;
+    window.requestAnimationFrame(onScrollHeaderVisibility);
+  }
+}, { passive: true });
+
+function renderToast(){
+  if (!state.toast) return '';
+  const bg = state.toast.kind === 'error' ? 'var(--coral-deep)' : 'var(--sage)';
+  return `<div class="toast" style="background:${bg};">${ICONS.check}<span>${escapeHtml(state.toast.message)}</span></div>`;
+}
+
+function renderMiniCartBar(){
+  if (state.tab !== 'vente') return '';
+  const detail = panierDetail();
+  if (detail.length === 0) return '';
+  const count = detail.reduce((s,p) => s + p.qty, 0);
+  return `<button class="mini-cart-bar" onclick="document.getElementById('cart-panel').scrollIntoView({behavior:'smooth',block:'start'})">
+    ${ICONS.bag} ${count} article${count>1?'s':''} · ${euros(panierTotal())} · voir le panier
+  </button>`;
+}
+
+// ---------- Realtime sync across devices (Mac <-> iPhone) ----------
+let realtimeReloadTimer = null;
+function scheduleRealtimeReload(){
+  clearTimeout(realtimeReloadTimer);
+  realtimeReloadTimer = setTimeout(() => { loadAll(); }, 400);
+}
+sb.channel('bebeach-realtime')
+  .on('postgres_changes', { event: '*', schema: 'public', table: 'articles' }, scheduleRealtimeReload)
+  .on('postgres_changes', { event: '*', schema: 'public', table: 'article_colors' }, scheduleRealtimeReload)
+  .on('postgres_changes', { event: '*', schema: 'public', table: 'article_variants' }, scheduleRealtimeReload)
+  .on('postgres_changes', { event: '*', schema: 'public', table: 'ventes' }, scheduleRealtimeReload)
+  .on('postgres_changes', { event: '*', schema: 'public', table: 'cloture_caisse' }, scheduleRealtimeReload)
+  .on('postgres_changes', { event: '*', schema: 'public', table: 'lieux_vente' }, scheduleRealtimeReload)
+  .on('postgres_changes', { event: '*', schema: 'public', table: 'clients' }, scheduleRealtimeReload)
+  .subscribe();
+
+sb.auth.onAuthStateChange((_event, session) => {
+  const hadSession = !!state.session;
+  state.session = session;
+  state.authChecking = false;
+  if (session && !hadSession){
+    loadAll();
+  } else if (!session){
+    render();
+  }
+});
+sb.auth.getSession().then(({ data }) => {
+  state.session = data.session;
+  state.authChecking = false;
+  if (data.session) loadAll();
+  else render();
+});
+
+if ('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
